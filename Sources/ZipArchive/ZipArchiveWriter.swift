@@ -170,6 +170,8 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
             }
             return
         }
+        let currentOffset = try self.storage.seekOffset(0)
+
         let fileHeader = Zip.FileHeader(
             versionNeeded: 10,
             flags: [],
@@ -184,7 +186,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
             diskStart: 0,
             internalAttribute: 0,
             externalAttributes: 0x4000_0000 | (0o755 << 16) | 0x10,  // directory | permissions 755 | MS-DOS directory flag
-            offsetOfLocalHeader: 0
+            offsetOfLocalHeader: currentOffset
         )
         try writeLocalFileHeader(fileHeader)
 
@@ -217,6 +219,8 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         var fileHeader = fileHeader
         let extraFieldsBuffer = getExtraFieldBuffer(&fileHeader, localFileHeader: false)
         let (fileModificationTime, fileModificationDate) = fileHeader.fileModification.msdosDate()
+        let isDirectory = (fileHeader.externalAttributes & 0x10) != 0
+        let filename = isDirectory ? "\(fileHeader.filename)/" : fileHeader.filename.string
         try self.storage.writeIntegers(
             Zip.fileHeaderSignature,
             Zip.versionMadeBy,
@@ -228,7 +232,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
             fileHeader.crc32,
             UInt32(fileHeader.compressedSize),
             UInt32(fileHeader.uncompressedSize),
-            UInt16(fileHeader.filename.string.utf8.count),
+            UInt16(filename.utf8.count),
             UInt16(extraFieldsBuffer.count),
             UInt16(fileHeader.comment.utf8.count),
             UInt16(fileHeader.diskStart),
@@ -236,7 +240,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
             fileHeader.externalAttributes,
             UInt32(fileHeader.offsetOfLocalHeader)
         )
-        try self.storage.writeString(fileHeader.filename.string)
+        try self.storage.writeString(filename)
         try self.storage.write(bytes: extraFieldsBuffer)
         try self.storage.writeString(fileHeader.comment)
     }
@@ -244,6 +248,8 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     func writeLocalFileHeader(_ fileHeader: Zip.FileHeader) throws {
         var fileHeader = fileHeader
         let extraFields = getExtraFieldBuffer(&fileHeader, localFileHeader: true)
+        let isDirectory = (fileHeader.externalAttributes & 0x10) != 0
+        let filename = isDirectory ? "\(fileHeader.filename)/" : fileHeader.filename.string
 
         let (fileModificationTime, fileModificationDate) = fileHeader.fileModification.msdosDate()
         try self.storage.writeIntegers(
@@ -256,10 +262,10 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
             fileHeader.crc32,
             UInt32(fileHeader.compressedSize),
             UInt32(fileHeader.uncompressedSize),
-            UInt16(fileHeader.filename.string.utf8.count),
+            UInt16(filename.utf8.count),
             UInt16(extraFields.count)
         )
-        try self.storage.writeString(fileHeader.filename.string)
+        try self.storage.writeString(filename)
         try self.storage.write(bytes: extraFields)
     }
 

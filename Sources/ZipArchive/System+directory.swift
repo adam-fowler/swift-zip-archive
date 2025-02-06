@@ -16,6 +16,25 @@ import Android
 #error("Unsupported Platform")
 #endif
 
+#if canImport(Darwin)
+internal var system_errno: CInt { Darwin.errno }
+#elseif os(Windows)
+internal var system_errno: CInt {
+    var value: CInt = 0
+    // TODO(compnerd) handle the error?
+    _ = ucrt._get_errno(&value)
+    return value
+}
+#elseif canImport(Glibc)
+internal var system_errno: CInt { Glibc.errno }
+#elseif canImport(Musl)
+internal var system_errno: CInt { Musl.errno }
+#elseif canImport(WASILibc)
+internal var system_errno: CInt { WASILibc.errno }
+#elseif canImport(Android)
+internal var system_errno: CInt { Android.errno }
+#endif
+
 private func valueOrErrno<I: FixedWidthInteger>(
     _ i: I
 ) -> Result<I, Errno> {
@@ -51,7 +70,7 @@ internal func nothingOrErrno<I: FixedWidthInteger>(
 
 extension Errno {
     internal static var current: Errno {
-        get { Errno(rawValue: errno) }
+        get { Errno(rawValue: system_errno) }
     }
 }
 

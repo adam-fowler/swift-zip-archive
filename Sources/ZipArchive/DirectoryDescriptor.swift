@@ -1,14 +1,14 @@
 import SystemPackage
 
-#if !os(Windows)
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
+#if os(Windows)
 
 struct DirectoryDescriptor {
-    struct MakeDirectoryOptions: OptionSet {
-        let rawValue: Int
-
-        static var ignoreExistingDirectoryError: Self { .init(rawValue: 1 << 0) }
-    }
-
     let rawValue: system_DIRPtr
 
     init(_ folder: FilePath) throws {
@@ -58,6 +58,49 @@ struct DirectoryDescriptor {
         }
     }
 
+    static func mkdir(
+        _ filePath: FilePath,
+        permissions: FilePermissions
+    ) throws {
+        do {
+            try filePath.withPlatformString { filename in
+                try nothingOrErrno(retryOnInterrupt: true) { system_mkdir(filename, permissions.rawValue) }.get()
+            }
+        } catch let error as Errno where error == .fileExists {}
+    }
+}
+
+#else
+
+struct DirectoryDescriptor {
+    static func forFilesInDirectory(_ folder: FilePath, operation: (FilePath, Bool) throws -> Void) throws {
+        let fileURL = folder.withPlatformString { URL(fileURLWithFileSystemRepresentation: $0, isDirectory: true, relativeTo: nil) }
+        let urls = try FileManager.default.contentsOfDirectory(at: fileURL, includingPropertiesForKeys: [.isDirectoryKey])
+        for url in urls {
+            var path = FilePath(url.path)
+            _ = path.removePrefix(.init(fileURL.path))
+            try operation(path, url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true)
+        }
+    }
+
+    static func mkdir(
+        _ folder: FilePath,
+        permissions: FilePermissions
+    ) throws {
+        do {
+            try FileManager.default.createDirectory(
+                atPath: folder.string,
+                withIntermediateDirectories: false,
+                attributes: [.posixPermissions: permissions.rawValue]
+            )
+        } catch let error as CocoaError {
+        }
+    }
+}
+
+#endif
+
+extension DirectoryDescriptor {
     static func recursiveForFilesInDirectory(_ folder: FilePath, operation: (FilePath) throws -> Void) throws {
         try Self.forFilesInDirectory(folder) { filePath, isDirectory in
             if isDirectory {
@@ -73,20 +116,4 @@ struct DirectoryDescriptor {
         }
         try FileDescriptor.remove(folder)
     }
-
-    static func mkdir(
-        _ filePath: FilePath,
-        options: MakeDirectoryOptions = [],
-        permissions: FilePermissions
-    ) throws {
-        do {
-            try filePath.withPlatformString { filename in
-                try nothingOrErrno(retryOnInterrupt: true) { system_mkdir(filename, permissions.rawValue) }.get()
-            }
-        } catch let error as Errno where error == .fileExists {
-            guard options.contains(.ignoreExistingDirectoryError) else { throw error }
-        }
-    }
 }
-
-#endif

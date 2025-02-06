@@ -15,7 +15,7 @@ extension ZipArchiveReader {
             // Is either unix or msdos directory flag set
             if entry.isDirectory {
                 let permissions = entry.externalAttributes.unixAttributes.filePermissions.union([.ownerRead, .ownerExecute])
-                try DirectoryDescriptor.mkdir(fullFilePath, options: .ignoreExistingDirectoryError, permissions: permissions)
+                try DirectoryDescriptor.mkdir(fullFilePath, permissions: permissions)
             } else {
                 let permissions = entry.externalAttributes.unixAttributes.filePermissions.union([.ownerRead])
                 let contents = try self.readFile(entry, password: password)

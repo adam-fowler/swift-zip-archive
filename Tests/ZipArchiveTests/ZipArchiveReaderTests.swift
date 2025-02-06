@@ -124,7 +124,7 @@ struct ZipArchiveReaderTests {
         try writer.writeFile(filename: "World/World.txt", contents: .init("world!".utf8))
         let buffer = try writer.finalizeBuffer()
         let reader = try ZipArchiveReader(buffer: buffer)
-        try DirectoryDescriptor.mkdir("Temp", options: .ignoreExistingDirectoryError, permissions: [.ownerReadWriteExecute])
+        try DirectoryDescriptor.mkdir("Temp", permissions: [.ownerReadWriteExecute])
         defer {
             try? DirectoryDescriptor.recursiveDelete("Temp")
         }

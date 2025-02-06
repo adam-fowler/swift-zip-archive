@@ -3,6 +3,11 @@ import SystemPackage
 #if !os(Windows)
 
 extension ZipArchiveReader {
+    ///  Extract the contents of the zip file into a directory
+    /// - Parameters:
+    ///   - rootFolder: Root folder to extract into
+    ///   - password: Password to use when decrypting files
+    /// - Throws:
     public func extract(to rootFolder: FilePath, password: String? = nil) throws {
         let directory = try self.readDirectory()
         for entry in directory {

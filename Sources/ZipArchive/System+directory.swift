@@ -82,6 +82,12 @@ extension FileDescriptor {
     }
 }
 
+func system_remove(
+    _ path: UnsafePointer<CInterop.PlatformChar>
+) -> CInt {
+    remove(path)
+}
+
 #if !os(Windows)
 
 internal typealias system_dirent = dirent
@@ -91,12 +97,6 @@ internal typealias system_DIRPtr = OpaquePointer
 #else
 internal typealias system_DIRPtr = UnsafeMutablePointer<DIR>
 #endif
-
-func system_remove(
-    _ path: UnsafePointer<CInterop.PlatformChar>
-) -> CInt {
-    remove(path)
-}
 
 internal func system_mkdir(
     _ path: UnsafePointer<CInterop.PlatformChar>,

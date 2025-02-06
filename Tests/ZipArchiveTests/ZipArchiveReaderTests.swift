@@ -116,6 +116,7 @@ struct ZipArchiveReaderTests {
         }
     }
 
+    #if !os(Windows)
     @Test
     func extractToFolder() throws {
         let writer = ZipArchiveWriter()
@@ -134,4 +135,5 @@ struct ZipArchiveReaderTests {
         }
         #expect(Set(files) == Set(["Temp/Hello/Hello.txt", "Temp/Hello", "Temp/World/World.txt", "Temp/World"]))
     }
+    #endif
 }

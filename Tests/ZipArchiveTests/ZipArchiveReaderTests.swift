@@ -1,4 +1,5 @@
 import Foundation
+import SystemPackage
 import Testing
 
 @testable import ZipArchive
@@ -122,6 +123,15 @@ struct ZipArchiveReaderTests {
         try writer.writeFile(filename: "World/World.txt", contents: .init("world!".utf8))
         let buffer = try writer.finalizeBuffer()
         let reader = try ZipArchiveReader(buffer: buffer)
+        try DirectoryDescriptor.mkdir("Temp", options: .ignoreExistingDirectoryError, permissions: [.ownerReadWriteExecute])
+        defer {
+            try? DirectoryDescriptor.recursiveDelete("Temp")
+        }
         try reader.extract(to: "Temp")
+        var files: [FilePath] = []
+        try DirectoryDescriptor.recursiveForFilesInDirectory("Temp") { filePath in
+            files.append(filePath)
+        }
+        #expect(Set(files) == Set(["Temp/Hello/Hello.txt", "Temp/Hello", "Temp/World/World.txt", "Temp/World"]))
     }
 }

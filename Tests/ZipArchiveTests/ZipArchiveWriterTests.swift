@@ -123,7 +123,7 @@ struct ZipArchiveWriterTests {
     func testAddingFileToEmptyFileZipArchive() throws {
         let filename = "testAddingFileToEmptyFileZipArchive.zip"
         defer {
-            FileDescriptor.remove(.init(filename))
+            try? FileDescriptor.remove(.init(filename))
         }
         try ZipArchiveWriter.withFile(filename, options: .create) { writer in
             try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8))
@@ -142,7 +142,7 @@ struct ZipArchiveWriterTests {
     func testAddingFileToNonEmptyFileZipArchive() throws {
         let filename = "testAddingFileToNonEmptyFileZipArchive.zip"
         defer {
-            FileDescriptor.remove(.init(filename))
+            try? FileDescriptor.remove(.init(filename))
         }
         try ZipArchiveWriter.withFile(filename, options: .create) { writer in
             try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8))
@@ -163,4 +163,20 @@ struct ZipArchiveWriterTests {
             #expect(fileContents2 == .init("Goodbye, world!".utf8))
         }
     }
+
+    #if !os(Windows)
+    @Test
+    func testWritingFolderContents() throws {
+        let writer = ZipArchiveWriter()
+        // write contents of sources folder into zip
+        try writer.writeFolderContents("./Sources", recursive: true, includeContainingFolder: true)
+        try writer.writeFolderContents("./Tests", recursive: true, includeContainingFolder: false)
+        let buffer = try writer.finalizeBuffer()
+
+        let reader = try ZipArchiveReader(buffer: buffer)
+        let directory = try reader.readDirectory()
+        #expect(directory.first { $0.filename == "Sources/ZipArchive/ZipStorage.swift" } != nil)
+        #expect(directory.first { $0.filename == "ZipArchiveTests/EncryptionTests.swift" } != nil)
+    }
+    #endif
 }

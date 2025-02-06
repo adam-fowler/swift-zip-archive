@@ -114,4 +114,14 @@ struct ZipArchiveReaderTests {
             #expect(String(decoding: file, as: UTF8.self) == "Hello, world!\n")
         }
     }
+
+    @Test
+    func extractToFolder() throws {
+        let writer = ZipArchiveWriter()
+        try writer.writeFile(filename: "Hello/Hello.txt", contents: .init("Hello,".utf8))
+        try writer.writeFile(filename: "World/World.txt", contents: .init("world!".utf8))
+        let buffer = try writer.finalizeBuffer()
+        let reader = try ZipArchiveReader(buffer: buffer)
+        try reader.extract(to: "Temp")
+    }
 }

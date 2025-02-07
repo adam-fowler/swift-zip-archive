@@ -7,6 +7,18 @@ import FoundationEssentials
 import Foundation
 #endif
 
+/// ZipArchiveReader configuration
+public struct ZipArchiveReaderConfiguration {
+    /// Additional supported compression methods
+    public var compressionMethods: [ZipCompression]
+
+    /// Initialize ZipArchiveReaderConfiguration
+    /// - Parameter compressionMethods: Additional supported compression methods
+    public init(compressionMethods: [ZipCompression] = []) {
+        self.compressionMethods = compressionMethods
+    }
+}
+
 /// Zip archive reader type
 public final class ZipArchiveReader<Storage: ZipReadableStorage> {
     let storage: Storage
@@ -14,24 +26,30 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
     let compressionMethods: ZipCompressionMethodsMap
     var parsingDirectory: Bool
 
-    init(_ file: Storage, compressionMethods: ZipCompressionMethodsMap) throws {
+    init(_ file: Storage, configuration: ZipArchiveReaderConfiguration) throws {
         self.storage = file
         self.endOfCentralDirectoryRecord = try Self.readEndOfCentralDirectory(file: file)
+
+        let compressionKeyValuePairs = configuration.compressionMethods.map { (key: $0.method, value: $0) }
         self.compressionMethods = [
-            Zip.FileCompressionMethod.noCompression: DoNothingCompressor(),
-            Zip.FileCompressionMethod.deflate: ZlibDeflateCompressor(windowBits: 15),
-        ].merging(compressionMethods) { first, second in second }
+            Zip.FileCompressionMethod.noCompression: NoZipCompression(),
+            Zip.FileCompressionMethod.deflate: ZlibDeflateCompression(),
+        ].merging(compressionKeyValuePairs) { first, second in second }
+
         self.parsingDirectory = false
     }
 
     /// Initialize ZipArchiveReader to read from a memory buffer
     ///
-    /// - Parameter buffer: Buffer containing zip archive
+    /// - Parameters:
+    ///   - buffer: Buffer containing zip archive
+    ///   - configuration: ZipArchiveReader configuration
+    /// - Throws:
     convenience public init<Bytes: RangeReplaceableCollection>(
         buffer: Bytes,
-        compressionMethods: ZipCompressionMethodsMap = [:]
+        configuration: ZipArchiveReaderConfiguration = .init()
     ) throws where Bytes.Element == UInt8, Bytes.Index == Int, Storage == ZipMemoryStorage<Bytes> {
-        try self.init(ZipMemoryStorage(buffer), compressionMethods: compressionMethods)
+        try self.init(ZipMemoryStorage(buffer), configuration: configuration)
     }
 
     /// Read directory from zip archive into an array
@@ -423,11 +441,12 @@ extension ZipArchiveReader where Storage == ZipFileStorage {
     ///
     /// - Parameters:
     ///   - filename: Filename of zip archive
+    ///   - configuration: ZipArchiveReader configuration
     ///   - process: Process to run with ZipArchiveReader
     /// - Returns: Value returned by process function
     public static func withFile<Value>(
         _ filename: String,
-        compressionMethods: ZipCompressionMethodsMap = [:],
+        configuration: ZipArchiveReaderConfiguration = .init(),
         process: (ZipArchiveReader) throws -> Value
     ) throws -> Value {
         let fileDescriptor = try FileDescriptor.open(
@@ -435,33 +454,8 @@ extension ZipArchiveReader where Storage == ZipFileStorage {
             .readOnly
         )
         return try fileDescriptor.closeAfter {
-            let zipArchiveReader = try ZipArchiveReader(ZipFileStorage(fileDescriptor), compressionMethods: compressionMethods)
+            let zipArchiveReader = try ZipArchiveReader(ZipFileStorage(fileDescriptor), configuration: configuration)
             return try process(zipArchiveReader)
-        }
-    }
-
-    /// Use ZipArchiveReader to load zip archive from disk and process it contents.
-    ///
-    /// Opens file, create ``ZipArchiveReader`` using file descriptor, run supplied closure with
-    /// ``ZipArchiveReader`` and then close file.
-    ///
-    /// - Parameters:
-    ///   - filename: Filename of zip archive
-    ///   - process: Process to run with ZipArchiveReader
-    /// - Returns: Value returned by process function
-    public static func withFile<Value: Sendable>(
-        _ filename: String,
-        compressionMethods: ZipCompressionMethodsMap = [:],
-        isolation: isolated (any Actor)? = #isolation,
-        process: (ZipArchiveReader) async throws -> Value
-    ) async throws -> Value {
-        let fileDescriptor = try FileDescriptor.open(
-            .init(filename),
-            .readOnly
-        )
-        return try await fileDescriptor.closeAfter {
-            let zipArchiveReader = try ZipArchiveReader(ZipFileStorage(fileDescriptor), compressionMethods: compressionMethods)
-            return try await process(zipArchiveReader)
         }
     }
 }

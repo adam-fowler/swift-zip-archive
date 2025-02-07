@@ -7,22 +7,14 @@ import FoundationEssentials
 import Foundation
 #endif
 
+/// Zip Archive writer configuration
 public struct ZipArchiveWriterConfiguration {
-    public struct Compression {
-        public var method: Zip.FileCompressionMethod
-        public var compressor: ZipCompressor
+    /// Compression method to use
+    public var compression: ZipCompression
 
-        public init(method: Zip.FileCompressionMethod, compressor: any ZipCompressor) {
-            self.method = method
-            self.compressor = compressor
-        }
-
-        public static var deflate: Self { .init(method: .deflate, compressor: ZlibDeflateCompressor(windowBits: 15)) }
-        public static var noCompression: Self { .init(method: .noCompression, compressor: DoNothingCompressor()) }
-    }
-    public var compression: Compression
-
-    public init(compression: Compression = .deflate) {
+    ///  Initialize ZipArchiveWriterConfiguration
+    /// - Parameter compression: Compression method to use
+    public init(compression: ZipCompression = ZlibDeflateCompression()) {
         self.compression = compression
     }
 }
@@ -36,7 +28,8 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     let configuration: ZipArchiveWriterConfiguration
     var newDirectoryEntries: [Zip.FileHeader]
 
-    /// Initialize archive writer with an empty buffer
+    /// Initialize ZipArchiveWriter
+    /// - Parameter configuration: ZipArchiveWriter configuration
     public init(configuration: ZipArchiveWriterConfiguration = .init()) where Storage == ZipMemoryStorage<[UInt8]> {
         self.configuration = configuration
         self.newDirectoryEntries = []
@@ -55,7 +48,10 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     }
 
     ///  Initialize archive writer with zip archive
-    /// - Parameter buffer: Buffer containing zip archive
+    ///
+    /// - Parameters:
+    ///   - buffer: Buffer containing zip archive
+    ///   - configuration: ZipArchiveWriter configuration
     convenience public init(
         buffer: [UInt8],
         configuration: ZipArchiveWriterConfiguration = .init()
@@ -64,7 +60,10 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     }
 
     ///  Initialize archive writer with zip archive
-    /// - Parameter buffer: Buffer containing zip archive
+    ///
+    /// - Parameters:
+    ///   - buffer: Buffer containing zip archive
+    ///   - configuration: ZipArchiveWriter configuration
     convenience public init(
         bytes: ArraySlice<UInt8>,
         configuration: ZipArchiveWriterConfiguration = .init()
@@ -77,7 +76,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         self.newDirectoryEntries = []
         self.storage = storage
         if appending {
-            let reader = try ZipArchiveReader(storage, compressionMethods: [:])
+            let reader = try ZipArchiveReader(storage, configuration: .init())
             self.endOfCentralDirectoryRecord = reader.endOfCentralDirectoryRecord
             // read directory before we truncate it
             try self.storage.seek(endOfCentralDirectoryRecord.offsetOfCentralDirectory)
@@ -189,7 +188,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         let crc = crc32(0, bytes: contents)
         let currentOffest = try self.storage.seekOffset(0)
 
-        var compressedContents = try self.configuration.compression.compressor.deflate(from: contents)
+        var compressedContents = try self.configuration.compression.deflate(from: contents)
 
         var flags: Zip.FileFlags = []
         var cryptKey: CryptKey? = nil
@@ -499,6 +498,7 @@ extension ZipArchiveWriter {
     /// - Parameters:
     ///   - filename: Filename of file
     ///   - options: Options when opening file
+    ///   - configuration: ZipArchiveWriter configuration
     ///   - process: Function to call with opened zip archive
     public static func withFile(
         _ filename: String,
@@ -521,40 +521,6 @@ extension ZipArchiveWriter {
                 configuration: configuration
             )
             try process(writer)
-            try writer.writeDirectory()
-        }
-    }
-
-    /// Use ZipArchiveWriter to write to a file
-    ///
-    /// Opens or creates new file depending on `.create` option. If opening file then read
-    /// as zip archive. Run supplied closure and then write zip directory and end of directory
-    /// sections and close the file.
-    ///
-    /// - Parameters:
-    ///   - filename: Filename of file
-    ///   - options: Options when opening file
-    ///   - process: Function to call with opened zip archive
-    public static func withFile(
-        _ filename: String,
-        options: FileOptions = [],
-        configuration: ZipArchiveWriterConfiguration = .init(),
-        isolation: isolated (any Actor)? = #isolation,
-        process: (ZipArchiveWriter) async throws -> Void
-    ) async throws where Storage == ZipFileStorage {
-        let fileDescriptor = try FileDescriptor.open(
-            .init(filename),
-            .readWrite,
-            options: options.contains(.create) ? .create : [],
-            permissions: options.contains(.create) ? [.ownerReadWrite, .groupRead, .otherRead] : nil
-        )
-        return try await fileDescriptor.closeAfter {
-            let writer = try ZipArchiveWriter<ZipFileStorage>(
-                ZipFileStorage(fileDescriptor),
-                appending: !options.contains(.create),
-                configuration: configuration
-            )
-            try await process(writer)
             try writer.writeDirectory()
         }
     }

@@ -177,4 +177,55 @@ struct ZipArchiveWriterTests {
         #expect(directory.first { $0.filename == "Sources/ZipArchive/ZipStorage.swift" } != nil)
         #expect(directory.first { $0.filename == "ZipArchiveTests/EncryptionTests.swift" } != nil)
     }
+
+    @Test
+    func testNoCompression() throws {
+        let writer = ZipArchiveWriter(configuration: .init(compression: .noCompression))
+        try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8))
+        let buffer = try writer.finalizeBuffer()
+        let zipArchiveReader = try ZipArchiveReader(buffer: buffer)
+        let directory = try zipArchiveReader.readDirectory()
+        #expect(directory.count == 1)
+        let fileHeader = try #require(directory.first)
+        #expect(fileHeader.filename == "Hello.txt")
+        #expect(fileHeader.compressionMethod == .noCompression)
+        let file = try zipArchiveReader.readFile(fileHeader)
+        #expect(String(decoding: file, as: UTF8.self) == "Hello, world!")
+    }
+
+    @Test
+    func testCustomCompression() throws {
+        struct XorCompressor: ZipCompression {
+            var method = Zip.FileCompressionMethod.reserved1
+            func inflate(from: [UInt8], uncompressedSize: Int) throws -> [UInt8] {
+                .init(unsafeUninitializedCapacity: max(uncompressedSize, from.count)) { buffer, initializedCount in
+                    for index in 0..<uncompressedSize {
+                        buffer[index] = from[index] ^ 0xff
+                    }
+                    initializedCount = uncompressedSize
+                }
+            }
+
+            func deflate(from: [UInt8]) throws -> [UInt8] {
+                .init(unsafeUninitializedCapacity: from.count) { buffer, initializedCount in
+                    for index in 0..<from.count {
+                        buffer[index] = from[index] ^ 0xff
+                    }
+                    initializedCount = from.count
+                }
+            }
+
+        }
+        let writer = ZipArchiveWriter(configuration: .init(compression: XorCompressor()))
+        try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8))
+        let buffer = try writer.finalizeBuffer()
+        let zipArchiveReader = try ZipArchiveReader(buffer: buffer, configuration: .init(compressionMethods: [XorCompressor()]))
+        let directory = try zipArchiveReader.readDirectory()
+        #expect(directory.count == 1)
+        let fileHeader = try #require(directory.first)
+        #expect(fileHeader.filename == "Hello.txt")
+        #expect(fileHeader.compressionMethod == .reserved1)
+        let file = try zipArchiveReader.readFile(fileHeader)
+        #expect(String(decoding: file, as: UTF8.self) == "Hello, world!")
+    }
 }

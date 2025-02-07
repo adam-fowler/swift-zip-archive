@@ -76,6 +76,9 @@ struct ZipArchiveReaderTests {
         let filePath = Bundle.module.fixedUpPath(forResource: "linux", ofType: "zip")!
         try ZipArchiveReader.withFile(filePath) { zipArchiveReader in
             let zipArchiveDirectory = try zipArchiveReader.readDirectory()
+            let folder = try #require(zipArchiveDirectory.first)
+            #expect(folder.isDirectory)
+            #expect(folder.filename == "Sources")
             let packageSwiftRecord = try #require(zipArchiveDirectory.first { $0.filename == "Sources/ZipArchive/ZipMemoryStorage.swift" })
             let file = try zipArchiveReader.readFile(packageSwiftRecord)
             #expect(String(decoding: file[...29], as: UTF8.self) == "/// Storage in a memory buffer")

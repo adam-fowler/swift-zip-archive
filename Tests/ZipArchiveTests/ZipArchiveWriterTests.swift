@@ -168,8 +168,8 @@ struct ZipArchiveWriterTests {
     func testWritingFolderContents() throws {
         let writer = ZipArchiveWriter()
         // write contents of sources folder into zip
-        try writer.writeFolderContents("./Sources", recursive: true, includeContainingFolder: true)
-        try writer.writeFolderContents("./Tests", recursive: true, includeContainingFolder: false)
+        try writer.writeFolderContents("./Sources", options: [.recursive, .includeContainingFolder])
+        try writer.writeFolderContents("./Tests", options: .recursive)
         let buffer = try writer.finalizeBuffer()
 
         let reader = try ZipArchiveReader(buffer: buffer)

@@ -1,13 +1,12 @@
 import SystemPackage
 
-#if canImport(FoundationEssentials) && !os(Windows)
-import FoundationEssentials
-#else
+#if os(Windows)
 import Foundation
 #endif
 
 #if !os(Windows)
 
+/// DirectoryDescriptor using C functions
 struct DirectoryDescriptor {
     let rawValue: system_DIRPtr
 
@@ -43,6 +42,7 @@ struct DirectoryDescriptor {
         return result
     }
 
+    /// Do shallow parse of files in a directory
     static func forFilesInDirectory(_ folder: FilePath, operation: (FilePath, Bool) throws -> Void) throws {
         let dirDescriptor = try DirectoryDescriptor(folder)
         try dirDescriptor.closeAfter {
@@ -61,6 +61,7 @@ struct DirectoryDescriptor {
         }
     }
 
+    /// Create a new directory
     static func mkdir(
         _ filePath: FilePath,
         options: MakeDirectoryOptions,
@@ -76,7 +77,9 @@ struct DirectoryDescriptor {
 
 #else
 
+/// DirectoryDescriptor using FileManager (Required for Windows)
 struct DirectoryDescriptor {
+    /// Do shallow parse of files in a directory
     static func forFilesInDirectory(_ folder: FilePath, operation: (FilePath, Bool) throws -> Void) throws {
         let fileURL = URL(fileURLWithPath: folder.string, isDirectory: true)
         let urls = try FileManager.default.contentsOfDirectory(at: fileURL, includingPropertiesForKeys: [.isDirectoryKey])
@@ -86,6 +89,7 @@ struct DirectoryDescriptor {
         }
     }
 
+    /// Create a new directory
     static func mkdir(
         _ folder: FilePath,
         options: MakeDirectoryOptions,
@@ -112,6 +116,7 @@ extension DirectoryDescriptor {
         static var ignoreExistingDirectoryError: Self { .init(rawValue: 1 << 0) }
     }
 
+    /// Resursive parse of files in a directory
     static func recursiveForFilesInDirectory(_ folder: FilePath, operation: (FilePath) throws -> Void) throws {
         try Self.forFilesInDirectory(folder) { filePath, isDirectory in
             if isDirectory {
@@ -121,6 +126,7 @@ extension DirectoryDescriptor {
         }
     }
 
+    /// Delete contents of directory and itself
     static func recursiveDelete(_ folder: FilePath) throws {
         try recursiveForFilesInDirectory(folder) { filePath in
             try FileDescriptor.remove(filePath)

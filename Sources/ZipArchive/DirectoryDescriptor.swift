@@ -1,6 +1,6 @@
 import SystemPackage
 
-#if canImport(FoundationEssentials)
+#if canImport(FoundationEssentials) && !os(Windows)
 import FoundationEssentials
 #else
 import Foundation

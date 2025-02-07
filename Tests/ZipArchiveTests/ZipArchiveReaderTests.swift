@@ -18,7 +18,7 @@ struct ZipArchiveReaderTests {
         let filePath = Bundle.module.fixedUpPath(forResource: "source", ofType: "zip")!
         let fileHandle = FileHandle(forReadingAtPath: filePath)
         let data = try #require(try fileHandle?.readToEnd())
-        let zipArchiveReader = try ZipArchiveReader(ZipMemoryStorage(data))
+        let zipArchiveReader = try ZipArchiveReader(buffer: data)
         let zipArchiveDirectory = try zipArchiveReader.readDirectory()
         #expect(zipArchiveDirectory.count == 9)
         #expect(zipArchiveDirectory[0].filename == "Sources/Zip/")
@@ -30,7 +30,7 @@ struct ZipArchiveReaderTests {
         let filePath = Bundle.module.fixedUpPath(forResource: "source", ofType: "zip")!
         let fileHandle = FileHandle(forReadingAtPath: filePath)
         let data = try #require(try fileHandle?.readToEnd())
-        let ZipArchiveReader = try ZipArchiveReader(ZipMemoryStorage(data))
+        let ZipArchiveReader = try ZipArchiveReader(buffer: data)
         let zipArchiveDirectory = try ZipArchiveReader.readDirectory()
         _ = try ZipArchiveReader.readFile(zipArchiveDirectory[2])
     }

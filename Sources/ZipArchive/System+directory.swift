@@ -111,6 +111,12 @@ internal func system_fdopendir(
     fdopendir(fd)
 }
 
+internal func system_opendir(
+    _ path: UnsafePointer<CInterop.PlatformChar>
+) -> system_DIRPtr? {
+    opendir(path)
+}
+
 internal func system_readdir(
     _ dir: system_DIRPtr
 ) -> UnsafeMutablePointer<dirent>? {

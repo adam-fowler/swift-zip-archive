@@ -116,7 +116,6 @@ struct ZipArchiveReaderTests {
         }
     }
 
-    #if !os(Windows)
     @Test
     func extractToFolder() throws {
         let writer = ZipArchiveWriter()
@@ -124,7 +123,7 @@ struct ZipArchiveReaderTests {
         try writer.writeFile(filename: "World/World.txt", contents: .init("world!".utf8))
         let buffer = try writer.finalizeBuffer()
         let reader = try ZipArchiveReader(buffer: buffer)
-        try DirectoryDescriptor.mkdir("Temp", permissions: [.ownerReadWriteExecute])
+        try DirectoryDescriptor.mkdir("Temp", options: .ignoreExistingDirectoryError, permissions: [.ownerReadWriteExecute])
         defer {
             try? DirectoryDescriptor.recursiveDelete("Temp")
         }
@@ -135,5 +134,4 @@ struct ZipArchiveReaderTests {
         }
         #expect(Set(files) == Set(["Temp/Hello/Hello.txt", "Temp/Hello", "Temp/World/World.txt", "Temp/World"]))
     }
-    #endif
 }

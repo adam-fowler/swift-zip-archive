@@ -6,14 +6,17 @@ import FoundationEssentials
 import Foundation
 #endif
 
-#if os(Windows)
+#if !os(Windows)
 
 struct DirectoryDescriptor {
     let rawValue: system_DIRPtr
 
     init(_ folder: FilePath) throws {
-        let fileDescriptor = try FileDescriptor.open(folder, .readOnly, options: .directory)
-        guard let dir = system_fdopendir(fileDescriptor.rawValue) else {
+        guard
+            let dir = folder.withPlatformString({ path in
+                system_opendir(path)
+            })
+        else {
             throw Errno.current
         }
         self.rawValue = dir
@@ -60,6 +63,7 @@ struct DirectoryDescriptor {
 
     static func mkdir(
         _ filePath: FilePath,
+        options: MakeDirectoryOptions,
         permissions: FilePermissions
     ) throws {
         do {
@@ -77,14 +81,14 @@ struct DirectoryDescriptor {
         let fileURL = folder.withPlatformString { URL(fileURLWithFileSystemRepresentation: $0, isDirectory: true, relativeTo: nil) }
         let urls = try FileManager.default.contentsOfDirectory(at: fileURL, includingPropertiesForKeys: [.isDirectoryKey])
         for url in urls {
-            var path = FilePath(url.path)
-            _ = path.removePrefix(.init(fileURL.path))
+            let path = folder.appending(url.lastPathComponent)
             try operation(path, url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true)
         }
     }
 
     static func mkdir(
         _ folder: FilePath,
+        options: MakeDirectoryOptions,
         permissions: FilePermissions
     ) throws {
         do {
@@ -93,7 +97,8 @@ struct DirectoryDescriptor {
                 withIntermediateDirectories: false,
                 attributes: [.posixPermissions: permissions.rawValue]
             )
-        } catch let error as CocoaError {
+        } catch let error as CocoaError where error.code == .fileWriteFileExists {
+            guard options.contains(.ignoreExistingDirectoryError) else { throw error }
         }
     }
 }
@@ -101,6 +106,12 @@ struct DirectoryDescriptor {
 #endif
 
 extension DirectoryDescriptor {
+    struct MakeDirectoryOptions: OptionSet {
+        let rawValue: Int
+
+        static var ignoreExistingDirectoryError: Self { .init(rawValue: 1 << 0) }
+    }
+
     static func recursiveForFilesInDirectory(_ folder: FilePath, operation: (FilePath) throws -> Void) throws {
         try Self.forFilesInDirectory(folder) { filePath, isDirectory in
             if isDirectory {

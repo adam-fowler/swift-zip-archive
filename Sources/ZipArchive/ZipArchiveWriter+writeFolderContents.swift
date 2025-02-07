@@ -1,7 +1,5 @@
 import SystemPackage
 
-#if !os(Windows)
-
 extension ZipArchiveWriter {
     ///  Write the contents of a folder into a zip file
     /// - Parameters:
@@ -30,5 +28,3 @@ extension ZipArchiveWriter {
         try _writeFolderContents(folder, recursive: recursive)
     }
 }
-
-#endif

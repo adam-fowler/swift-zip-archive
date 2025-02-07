@@ -164,7 +164,6 @@ struct ZipArchiveWriterTests {
         }
     }
 
-    #if !os(Windows)
     @Test
     func testWritingFolderContents() throws {
         let writer = ZipArchiveWriter()
@@ -178,5 +177,4 @@ struct ZipArchiveWriterTests {
         #expect(directory.first { $0.filename == "Sources/ZipArchive/ZipStorage.swift" } != nil)
         #expect(directory.first { $0.filename == "ZipArchiveTests/EncryptionTests.swift" } != nil)
     }
-    #endif
 }

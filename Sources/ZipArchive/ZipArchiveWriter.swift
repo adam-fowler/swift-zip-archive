@@ -7,16 +7,38 @@ import FoundationEssentials
 import Foundation
 #endif
 
+public struct ZipArchiveWriterConfiguration {
+    public struct Compression {
+        public var method: Zip.FileCompressionMethod
+        public var compressor: ZipCompressor
+
+        public init(method: Zip.FileCompressionMethod, compressor: any ZipCompressor) {
+            self.method = method
+            self.compressor = compressor
+        }
+
+        public static var deflate: Self { .init(method: .deflate, compressor: ZlibDeflateCompressor(windowBits: 15)) }
+        public static var noCompression: Self { .init(method: .noCompression, compressor: DoNothingCompressor()) }
+    }
+    public var compression: Compression
+
+    public init(compression: Compression = .deflate) {
+        self.compression = compression
+    }
+}
+
 /// Zip archive writer type
 public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     var storage: Storage
     var endOfCentralDirectoryRecord: Zip.EndOfCentralDirectory
     let directory: [Zip.FileHeader]
     let directoryBuffer: [UInt8]?
+    let configuration: ZipArchiveWriterConfiguration
     var newDirectoryEntries: [Zip.FileHeader]
 
     /// Initialize archive writer with an empty buffer
-    public init() where Storage == ZipMemoryStorage<[UInt8]> {
+    public init(configuration: ZipArchiveWriterConfiguration = .init()) where Storage == ZipMemoryStorage<[UInt8]> {
+        self.configuration = configuration
         self.newDirectoryEntries = []
         self.storage = .init()
         self.endOfCentralDirectoryRecord = .init(
@@ -34,21 +56,28 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
 
     ///  Initialize archive writer with zip archive
     /// - Parameter buffer: Buffer containing zip archive
-    convenience public init(buffer: [UInt8]) throws where Storage == ZipMemoryStorage<[UInt8]> {
-        try self.init(.init(buffer))
+    convenience public init(
+        buffer: [UInt8],
+        configuration: ZipArchiveWriterConfiguration = .init()
+    ) throws where Storage == ZipMemoryStorage<[UInt8]> {
+        try self.init(.init(buffer), appending: true, configuration: configuration)
     }
 
     ///  Initialize archive writer with zip archive
     /// - Parameter buffer: Buffer containing zip archive
-    convenience public init(bytes: ArraySlice<UInt8>) throws where Storage == ZipMemoryStorage<ArraySlice<UInt8>> {
-        try self.init(.init(bytes))
+    convenience public init(
+        bytes: ArraySlice<UInt8>,
+        configuration: ZipArchiveWriterConfiguration = .init()
+    ) throws where Storage == ZipMemoryStorage<ArraySlice<UInt8>> {
+        try self.init(.init(bytes), appending: true, configuration: configuration)
     }
 
-    init(_ storage: Storage, appending: Bool = true) throws {
+    init(_ storage: Storage, appending: Bool, configuration: ZipArchiveWriterConfiguration) throws {
+        self.configuration = configuration
         self.newDirectoryEntries = []
         self.storage = storage
         if appending {
-            let reader = try ZipArchiveReader(storage)
+            let reader = try ZipArchiveReader(storage, compressionMethods: [:])
             self.endOfCentralDirectoryRecord = reader.endOfCentralDirectoryRecord
             // read directory before we truncate it
             try self.storage.seek(endOfCentralDirectoryRecord.offsetOfCentralDirectory)
@@ -160,7 +189,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         let crc = crc32(0, bytes: contents)
         let currentOffest = try self.storage.seekOffset(0)
 
-        var compressedContents = try ZlibDeflateCompressor(windowBits: 15).deflate(from: contents)
+        var compressedContents = try self.configuration.compression.compressor.deflate(from: contents)
 
         var flags: Zip.FileFlags = []
         var cryptKey: CryptKey? = nil
@@ -174,7 +203,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
             versionMadeBy: Zip.versionMadeBy,
             versionNeeded: 20,
             flags: flags,
-            compressionMethod: .deflated,
+            compressionMethod: self.configuration.compression.method,
             fileModification: .now,
             crc32: crc,
             compressedSize: fileSize,
@@ -474,6 +503,7 @@ extension ZipArchiveWriter {
     public static func withFile(
         _ filename: String,
         options: FileOptions = [],
+        configuration: ZipArchiveWriterConfiguration = .init(),
         process: (
             ZipArchiveWriter
         ) throws -> Void
@@ -487,7 +517,8 @@ extension ZipArchiveWriter {
         return try fileDescriptor.closeAfter {
             let writer = try ZipArchiveWriter<ZipFileStorage>(
                 ZipFileStorage(fileDescriptor),
-                appending: !options.contains(.create)
+                appending: !options.contains(.create),
+                configuration: configuration
             )
             try process(writer)
             try writer.writeDirectory()
@@ -507,6 +538,7 @@ extension ZipArchiveWriter {
     public static func withFile(
         _ filename: String,
         options: FileOptions = [],
+        configuration: ZipArchiveWriterConfiguration = .init(),
         isolation: isolated (any Actor)? = #isolation,
         process: (ZipArchiveWriter) async throws -> Void
     ) async throws where Storage == ZipFileStorage {
@@ -519,7 +551,8 @@ extension ZipArchiveWriter {
         return try await fileDescriptor.closeAfter {
             let writer = try ZipArchiveWriter<ZipFileStorage>(
                 ZipFileStorage(fileDescriptor),
-                appending: !options.contains(.create)
+                appending: !options.contains(.create),
+                configuration: configuration
             )
             try await process(writer)
             try writer.writeDirectory()

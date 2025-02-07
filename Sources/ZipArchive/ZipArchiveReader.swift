@@ -19,7 +19,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         self.endOfCentralDirectoryRecord = try Self.readEndOfCentralDirectory(file: file)
         self.compressionMethods = [
             Zip.FileCompressionMethod.noCompression: DoNothingCompressor(),
-            Zip.FileCompressionMethod.deflated: ZlibDeflateCompressor(windowBits: 15),
+            Zip.FileCompressionMethod.deflate: ZlibDeflateCompressor(windowBits: 15),
         ].merging(compressionMethods) { first, second in second }
         self.parsingDirectory = false
     }

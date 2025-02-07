@@ -1,31 +1,31 @@
 import CZipZlib
 
 /// protocol for zip compression method
-protocol ZipCompressor {
+public protocol ZipCompressor {
     func inflate(from: [UInt8], uncompressedSize: Int) throws -> [UInt8]
     func deflate(from: [UInt8]) throws -> [UInt8]
 }
 
-typealias ZipCompressionMethodsMap = [Zip.FileCompressionMethod: any ZipCompressor]
+public typealias ZipCompressionMethodsMap = [Zip.FileCompressionMethod: any ZipCompressor]
 
-struct DoNothingCompressor: ZipCompressor {
-    func inflate(from: [UInt8], uncompressedSize: Int) throws -> [UInt8] {
+public struct DoNothingCompressor: ZipCompressor {
+    public func inflate(from: [UInt8], uncompressedSize: Int) throws -> [UInt8] {
         from
     }
-    func deflate(from: [UInt8]) throws -> [UInt8] {
+    public func deflate(from: [UInt8]) throws -> [UInt8] {
         from
     }
 }
 
 /// Zip zlib deflate compression method
-class ZlibDeflateCompressor: ZipCompressor {
+public class ZlibDeflateCompressor: ZipCompressor {
     let windowBits: Int32
 
-    init(windowBits: Int32) {
+    public init(windowBits: Int32) {
         self.windowBits = windowBits
     }
 
-    func inflate(from: [UInt8], uncompressedSize: Int) throws -> [UInt8] {
+    public func inflate(from: [UInt8], uncompressedSize: Int) throws -> [UInt8] {
         var stream = z_stream()
         stream.zalloc = nil
         stream.zfree = nil
@@ -61,7 +61,7 @@ class ZlibDeflateCompressor: ZipCompressor {
         }
     }
 
-    func deflate(from: [UInt8]) throws -> [UInt8] {
+    public func deflate(from: [UInt8]) throws -> [UInt8] {
         var stream = z_stream()
         stream.zalloc = nil
         stream.zfree = nil

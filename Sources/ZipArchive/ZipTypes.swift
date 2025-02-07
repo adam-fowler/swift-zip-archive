@@ -43,7 +43,7 @@ public enum Zip {
         case compressionFactor4 = 5
         case imploded = 6
         case reserved1 = 7
-        case deflated = 8
+        case deflate = 8
         case enhancedDeflated = 9
         case pkWareDCLImploded = 10
         case reserved2 = 11

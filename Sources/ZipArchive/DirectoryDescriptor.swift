@@ -78,7 +78,7 @@ struct DirectoryDescriptor {
 
 struct DirectoryDescriptor {
     static func forFilesInDirectory(_ folder: FilePath, operation: (FilePath, Bool) throws -> Void) throws {
-        let fileURL = folder.withPlatformString { URL(fileURLWithFileSystemRepresentation: $0, isDirectory: true, relativeTo: nil) }
+        let fileURL = URL(fileURLWithPath: folder.string, isDirectory: true)
         let urls = try FileManager.default.contentsOfDirectory(at: fileURL, includingPropertiesForKeys: [.isDirectoryKey])
         for url in urls {
             let path = folder.appending(url.lastPathComponent)

@@ -72,6 +72,15 @@ struct ZipArchiveReaderTests {
     }
 
     @Test
+    func loadEmptyZipArchive() throws {
+        let writer = ZipArchiveWriter()
+        let buffer = try writer.finalizeBuffer()
+        let reader = try ZipArchiveReader(buffer: buffer)
+        let directory = try reader.readDirectory()
+        #expect(directory.count == 0)
+    }
+
+    @Test
     func loadLinuxZipArchive() throws {
         let filePath = Bundle.module.fixedUpPath(forResource: "linux", ofType: "zip")!
         try ZipArchiveReader.withFile(filePath) { zipArchiveReader in

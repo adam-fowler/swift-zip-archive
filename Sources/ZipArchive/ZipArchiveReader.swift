@@ -277,8 +277,15 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
 
     static func readEndOfCentralDirectory(file: some ZipReadableStorage) throws -> Zip.EndOfCentralDirectory {
         _ = try searchForEndOfCentralDirectory(file: file)
-        try file.seekOffset(-20)
-        let zip64EndOfCentralLocator = try Self.readZip64EndOfCentralLocator(file: file)
+
+        let zip64EndOfCentralLocator: Zip.Zip64EndOfCentralLocator?
+        // verify we have space to read the zip64 end of central directory locator, before reading it
+        if try file.seekOffset(0) > 20 {
+            try file.seekOffset(-20)
+            zip64EndOfCentralLocator = try Self.readZip64EndOfCentralLocator(file: file)
+        } else {
+            zip64EndOfCentralLocator = nil
+        }
 
         let (
             signature, diskNumber, diskNumberCentralDirectoryStarts, diskEntries, totalEntries, centralDirectorySize, offsetOfCentralDirectory,

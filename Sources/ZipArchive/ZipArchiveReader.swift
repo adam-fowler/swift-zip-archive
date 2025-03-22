@@ -93,7 +93,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
             throw ZipArchiveReaderError.unsupportedCompressionMethod
         }
         var encryptionKeys: [UInt8]?
-        var fileSize = localFileHeader.compressedSize
+        var fileSize = file.flags.contains(.dataDescriptor) ? file.compressedSize : localFileHeader.compressedSize
         // if encrypted read encryption header
         if localFileHeader.flags.contains(.encrypted) {
             encryptionKeys = try self.storage.readBytes(length: 12)
@@ -113,10 +113,11 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         } else if encryptionKeys != nil {
             throw ZipArchiveReaderError.encryptedFilesRequirePassword
         }
-        let uncompressedBytes = try compressor.inflate(from: fileBytes, uncompressedSize: numericCast(localFileHeader.uncompressedSize))
+        let uncompressedSize = file.flags.contains(.dataDescriptor) ? file.uncompressedSize : localFileHeader.uncompressedSize
+        let uncompressedBytes = try compressor.inflate(from: fileBytes, uncompressedSize: numericCast(uncompressedSize))
         // Verify CRC32
         let crc = crc32(0, bytes: uncompressedBytes)
-        guard crc == localFileHeader.crc32 else {
+        guard crc == (file.flags.contains(.dataDescriptor) ? file.crc32 : localFileHeader.crc32) else {
             throw ZipArchiveReaderError.crc32FileValidationFailed
         }
         return uncompressedBytes

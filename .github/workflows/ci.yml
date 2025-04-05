@@ -37,7 +37,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        image: ["swift:6.0", "swiftlang/swift:nightly-6.1-jammy"]
+        image: ["swift:6.0", "swift:6.1"]
 
     container:
       image: ${{ matrix.image }}
@@ -64,8 +64,8 @@ jobs:
     steps:
       - uses: compnerd/gha-setup-swift@main
         with:
-          branch: swift-6.0-release
-          tag: 6.0-RELEASE
+          branch: swift-6.1-release
+          tag: 6.1-RELEASE
       - name: Download zlib
         run: |
           curl -L -o zlib.zip https://www.zlib.net/zlib131.zip

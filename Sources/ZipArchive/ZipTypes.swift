@@ -148,7 +148,7 @@ public enum Zip {
         public var externalAttributes: ExternalAttributes
         var offsetOfLocalHeader: Int64
 
-        var isDirectory: Bool {
+        public var isDirectory: Bool {
             versionMadeBy.system == .unix
                 ? self.externalAttributes.unixAttributes.contains(.isDirectory)
                 : self.externalAttributes.msdosAttributes.contains(.isDirectory)

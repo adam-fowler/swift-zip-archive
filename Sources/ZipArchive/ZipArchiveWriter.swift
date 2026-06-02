@@ -188,7 +188,12 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         let crc = crc32(0, bytes: contents)
         let currentOffest = try self.storage.seekOffset(0)
 
-        var compressedContents = try self.configuration.compression.deflate(from: contents)
+        var compressedContents =
+            if self.configuration.compression.method == .noCompression {
+                contents
+            } else {
+                try self.configuration.compression.deflate(from: contents)
+            }
 
         var flags: Zip.FileFlags = []
         var cryptKey: CryptKey? = nil

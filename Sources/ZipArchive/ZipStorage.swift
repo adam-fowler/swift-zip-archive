@@ -1,5 +1,17 @@
 /// Protocol for storage of a Zip archive
 public protocol ZipStorage {
+    func currentPosition() throws(ZipStorageError) -> Int64
+}
+
+/// Protocol for storage that can be read from
+public protocol ZipReadableStorage: ZipStorage {
+    /// Buffer type returned by `read`
+    associatedtype Buffer: RangeReplaceableCollection where Buffer.Element == UInt8, Buffer.Index == Int
+    ///  Read so many bytes from storage
+    /// - Parameter count: Number of bytes to read
+    /// - Throws: ``ZipStorageError``
+    /// - Returns: Bytes read from storage
+    func read(_ count: Int) throws(ZipStorageError) -> Buffer
     /// Seek to position in storage
     /// - Parameter index: Absolute offset in file
     /// - Throws: ``ZipStorageError``
@@ -16,15 +28,10 @@ public protocol ZipStorage {
     @discardableResult func seekEnd(_ offset: Int64) throws(ZipStorageError) -> Int64
 }
 
-/// Protocol for storage that can be read from
-public protocol ZipReadableStorage: ZipStorage {
-    /// Buffer type returned by `read`
-    associatedtype Buffer: RangeReplaceableCollection where Buffer.Element == UInt8, Buffer.Index == Int
-    ///  Read so many bytes from storage
-    /// - Parameter count: Number of bytes to read
-    /// - Throws: ``ZipStorageError``
-    /// - Returns: Bytes read from storage
-    func read(_ count: Int) throws(ZipStorageError) -> Buffer
+extension ZipReadableStorage {
+    public func currentPosition() throws(ZipStorageError) -> Int64 {
+        try seekOffset(0)
+    }
 }
 
 extension ZipReadableStorage {
@@ -88,7 +95,7 @@ extension ZipReadableStorage {
 }
 
 /// Protocol for storage that can be written to
-public protocol ZipWriteableStorage: ZipReadableStorage {
+public protocol ZipWriteableStorage: ZipStorage {
     /// Write buffer to storage
     /// - Parameter bytes: Buffer to write to storage
     /// - Throws: ``ZipStorageError``

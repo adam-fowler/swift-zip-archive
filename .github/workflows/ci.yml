@@ -12,10 +12,15 @@ on:
 
 jobs:
   macos:
-    runs-on: macOS-15
+    runs-on: macos-26
+    timeout-minutes: 15
     steps:
+      - name: Select appropriate Xcode version
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest-stable
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
       - name: SPM tests
@@ -37,13 +42,13 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        image: ["swift:6.0", "swift:6.1"]
+        image: ["swift:6.1", "swift:6.2", "swift:6.3"]
 
     container:
       image: ${{ matrix.image }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Test
         run: |
           swift test --enable-code-coverage
@@ -64,8 +69,8 @@ jobs:
     steps:
       - uses: compnerd/gha-setup-swift@main
         with:
-          branch: swift-6.1-release
-          tag: 6.1-RELEASE
+          branch: swift-6.3-release
+          tag: 6.3-RELEASE
       - name: Download zlib
         run: |
           curl -L -o zlib.zip https://www.zlib.net/zlib131.zip
@@ -80,7 +85,7 @@ jobs:
           cmake --build . --config Release
           cmake --install . --prefix ../install
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Swift version
         run: |
           swift --version

@@ -73,12 +73,12 @@ jobs:
           tag: 6.3-RELEASE
       - name: Download zlib
         run: |
-          curl -L -o zlib.zip https://www.zlib.net/zlib131.zip
-          mkdir zlib-131
-          tar -xf zlib.zip -C zlib-131 --strip-components=1
+          curl -L -o zlib.zip https://www.zlib.net/zlib132.zip
+          mkdir zlib-132
+          tar -xf zlib.zip -C zlib-132 --strip-components=1
       - name: Build and install zlib
         run: |
-          cd zlib-131
+          cd zlib-132
           mkdir build
           cd build
           cmake ..

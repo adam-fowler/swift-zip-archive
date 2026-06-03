@@ -70,7 +70,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         try self.init(.init(bytes), appending: true, configuration: configuration)
     }
 
-    init(_ storage: Storage, appending: Bool, configuration: ZipArchiveWriterConfiguration) throws {
+    init(_ storage: Storage, appending: Bool, configuration: ZipArchiveWriterConfiguration) throws where Storage: ZipReadableStorage {
         self.configuration = configuration
         self.newDirectoryEntries = []
         self.storage = storage
@@ -185,7 +185,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         try addFolder(filePath.removingRoot().removingLastComponent())
         // Calculate CRC32
         let crc = crc32(0, bytes: contents)
-        let currentOffest = try self.storage.seekOffset(0)
+        let currentOffest = try self.storage.currentPosition()
 
         var compressedContents =
             if self.configuration.compression.method == .noCompression {
@@ -249,7 +249,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
             }
             return
         }
-        let currentOffset = try self.storage.seekOffset(0)
+        let currentOffset = try self.storage.currentPosition()
 
         let fileHeader = Zip.FileHeader(
             versionMadeBy: Zip.versionMadeBy,
@@ -278,7 +278,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     }
 
     func writeDirectory() throws {
-        let centralDirectoryOffset = try storage.seekOffset(0)
+        let centralDirectoryOffset = try storage.currentPosition()
 
         // write original directory
         if let directoryBuffer {
@@ -288,7 +288,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         for file in newDirectoryEntries {
             try writeFileHeader(file)
         }
-        let centralDirectoryEndOffset = try storage.seekOffset(0)
+        let centralDirectoryEndOffset = try storage.currentPosition()
 
         endOfCentralDirectoryRecord.offsetOfCentralDirectory = centralDirectoryOffset
         endOfCentralDirectoryRecord.centralDirectorySize = centralDirectoryEndOffset - centralDirectoryOffset

@@ -443,7 +443,7 @@ typedef uLong FAR uLongf;
    typedef unsigned long cziparchive_z_crc_t;
 #endif
 
-#if 1     /* was set to #if 1 by ./configure */
+#if !defined(_WIN32)     /* was set to #if 1 by ./configure, but WIN32 doesn't include it */
 #  define CZIPARCHIVE_Z_HAVE_UNISTD_H
 #endif
 

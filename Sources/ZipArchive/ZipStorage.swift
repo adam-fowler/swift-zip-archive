@@ -1,3 +1,11 @@
+//
+// This source file is part of the swift-zip-archive project
+// Copyright (c) 2026 the swift-zip-archive project authors
+//
+// See LICENSE for license information
+// SPDX-License-Identifier: Apache-2.0
+//
+
 /// Protocol for storage of a Zip archive
 public protocol ZipStorage {
     func currentPosition() throws(ZipStorageError) -> Int64

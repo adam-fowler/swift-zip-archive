@@ -11,4 +11,3 @@ jobs:
     with:
       api_breakage_check_container_image: swift:latest
       docs_check_container_image: swift:latest
-      license_header_check_enabled: false

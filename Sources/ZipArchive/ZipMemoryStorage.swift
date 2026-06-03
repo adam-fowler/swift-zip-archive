@@ -1,3 +1,11 @@
+//
+// This source file is part of the swift-zip-archive project
+// Copyright (c) 2026 the swift-zip-archive project authors
+//
+// See LICENSE for license information
+// SPDX-License-Identifier: Apache-2.0
+//
+
 /// Storage in a memory buffer
 public final class ZipMemoryStorage<Bytes: RangeReplaceableCollection>: ZipReadableStorage, ZipWriteableStorage
 where Bytes.Element == UInt8, Bytes.Index == Int {

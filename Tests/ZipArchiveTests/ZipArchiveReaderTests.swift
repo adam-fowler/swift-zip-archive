@@ -93,7 +93,7 @@ struct ZipArchiveReaderTests {
             #expect(String(decoding: file[...29], as: UTF8.self) == "/// Storage in a memory buffer")
         }
     }
-    
+
     @Test
     func loadMacosZipArchive() throws {
         let filePath = Bundle.module.fixedUpPath(forResource: "macos", ofType: "zip")!

@@ -11,3 +11,4 @@ jobs:
     with:
       api_breakage_check_container_image: swift:latest
       docs_check_container_image: swift:latest
+      python_lint_check_enabled: false

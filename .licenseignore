@@ -34,6 +34,6 @@ Dockerfile
 Snippets/*
 dev/git.commit.template
 .unacceptablelanguageignore
-*.zip
 Sources/CZipArchiveZlib/*
+Tests/ZipArchiveTests/resources/*
 LICENSE

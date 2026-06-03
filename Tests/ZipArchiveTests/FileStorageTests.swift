@@ -97,19 +97,18 @@ final class ZipFileStorageTests {
         try fileDescriptor.close()
     }
 
-    /*
     @Test func testWrite() throws {
         let file = ZipMemoryStorage<[UInt8]>()
-        file.seekEnd()
-        #expect(file.write(bytes: [1, 2, 3]) == 3)
+        try file.seekEnd()
+        file.write(bytes: [1, 2, 3])
         try file.seek(0)
         #expect(try file.read(3) == [1, 2, 3])
     }
 
     @Test func testAppendingWrite() throws {
         let file = ZipMemoryStorage<[UInt8]>([1, 2, 3])
-        file.seekEnd()
-        #expect(file.write(bytes: [4, 5, 6]) == 3)
+        try file.seekEnd()
+        file.write(bytes: [4, 5, 6])
         try file.seek(0)
         #expect(try file.read(6) == [1, 2, 3, 4, 5, 6])
     }
@@ -117,14 +116,14 @@ final class ZipFileStorageTests {
     @Test func testReplacingWrite() throws {
         let file = ZipMemoryStorage<[UInt8]>([1, 2, 3, 4, 5, 6])
         try file.seek(2)
-        #expect(file.write(bytes: [7, 8, 9]) == 3)
+        file.write(bytes: [7, 8, 9])
         try file.seek(0)
         #expect(try file.read(6) == [1, 2, 7, 8, 9, 6])
         try file.seek(5)
-        #expect(file.write(bytes: [7, 8, 9]) == 3)
+        file.write(bytes: [7, 8, 9])
         try file.seek(0)
         #expect(try file.read(8) == [1, 2, 7, 8, 9, 7, 8, 9])
-    }*/
+    }
 }
 
 extension Bundle {

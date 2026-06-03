@@ -36,3 +36,4 @@ dev/git.commit.template
 .unacceptablelanguageignore
 *.zip
 Sources/CZipArchiveZlib/*
+LICENSE

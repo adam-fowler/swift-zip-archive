@@ -1,4 +1,4 @@
-import CZipZlib
+private import CZipArchiveZlib
 
 /// protocol for zip compression method
 public protocol ZipCompression {
@@ -40,12 +40,12 @@ public class ZlibDeflateCompression: ZipCompression {
     public init() {}
 
     public func inflate(from: [UInt8], uncompressedSize: Int) throws -> [UInt8] {
-        var stream = z_stream()
+        var stream = cziparchive_z_stream()
         stream.zalloc = nil
         stream.zfree = nil
         stream.opaque = nil
-        let rt = CZipZlib_inflateInit2(&stream, -windowBits)
-        guard rt == Z_OK else { throw ZipArchiveReaderError.compressionError }
+        let rt = CZipArchiveZlib_inflateInit2(&stream, -windowBits)
+        guard rt == CZIPARCHIVE_Z_OK else { throw ZipArchiveReaderError.compressionError }
 
         var from = from
         let buffer: [UInt8]
@@ -53,21 +53,21 @@ public class ZlibDeflateCompression: ZipCompression {
             buffer = try .init(unsafeUninitializedCapacity: uncompressedSize) { toBuffer, count in
                 try from.withUnsafeMutableBytes { fromBuffer in
                     stream.avail_in = UInt32(fromBuffer.count)
-                    stream.next_in = CZipZlib_voidPtr_to_BytefPtr(fromBuffer.baseAddress!)
+                    stream.next_in = CZipArchiveZlib_voidPtr_to_BytefPtr(fromBuffer.baseAddress!)
                     stream.avail_out = UInt32(toBuffer.count)
-                    stream.next_out = CZipZlib_voidPtr_to_BytefPtr(toBuffer.baseAddress!)
+                    stream.next_out = CZipArchiveZlib_voidPtr_to_BytefPtr(toBuffer.baseAddress!)
 
-                    let rt = CZipZlib.inflate(&stream, Z_FINISH)
+                    let rt = cziparchive_z_inflate(&stream, CZIPARCHIVE_Z_FINISH)
                     switch rt {
-                    case Z_OK:
+                    case CZIPARCHIVE_Z_OK:
                         break
-                    case Z_BUF_ERROR:
+                    case CZIPARCHIVE_Z_BUF_ERROR:
                         throw ZipArchiveReaderError.compressionError
-                    case Z_DATA_ERROR:
+                    case CZIPARCHIVE_Z_DATA_ERROR:
                         throw ZipArchiveReaderError.compressionError
-                    case Z_MEM_ERROR:
+                    case CZIPARCHIVE_Z_MEM_ERROR:
                         throw ZipArchiveReaderError.compressionError
-                    case Z_STREAM_END:
+                    case CZIPARCHIVE_Z_STREAM_END:
                         break
                     default:
                         throw ZipArchiveReaderError.compressionError
@@ -76,13 +76,13 @@ public class ZlibDeflateCompression: ZipCompression {
                 count = uncompressedSize
             }
         } catch {
-            let rt = inflateEnd(&stream)
-            assert(rt == Z_OK)
+            let rt = cziparchive_z_inflateEnd(&stream)
+            assert(rt == CZIPARCHIVE_Z_OK)
             throw error
         }
-        let deflateRT = inflateEnd(&stream)
+        let deflateRT = cziparchive_z_inflateEnd(&stream)
         switch deflateRT {
-        case Z_STREAM_END:
+        case CZIPARCHIVE_Z_STREAM_END:
             throw ZipArchiveReaderError.compressionError
         default:
             break
@@ -91,12 +91,12 @@ public class ZlibDeflateCompression: ZipCompression {
     }
 
     public func deflate(from: [UInt8]) throws -> [UInt8] {
-        var stream = z_stream()
+        var stream = cziparchive_z_stream()
         stream.zalloc = nil
         stream.zfree = nil
         stream.opaque = nil
-        let rt = CZipZlib_deflateInit2(&stream, 9, Z_DEFLATED, -windowBits, 9, Z_DEFAULT_STRATEGY)
-        guard rt == Z_OK else { throw ZipArchiveReaderError.compressionError }
+        let rt = CZipArchiveZlib_deflateInit2(&stream, 9, CZIPARCHIVE_Z_DEFLATED, -windowBits, 9, CZIPARCHIVE_Z_DEFAULT_STRATEGY)
+        guard rt == CZIPARCHIVE_Z_OK else { throw ZipArchiveReaderError.compressionError }
 
         var from = from
         // deflateBound() provides an upper limit on the number of bytes the input can
@@ -110,47 +110,47 @@ public class ZlibDeflateCompression: ZipCompression {
         // follows it with an empty stored block that is three bits plus filler bits to the next byte, followed by four bytes
         // (00 00 ff ff)."
         #if os(Windows)
-        let largestCompressedSize = deflateBound(&stream, UInt32(from.count)) + 6
+        let largestCompressedSize = cziparchive_z_deflateBound(&stream, UInt32(from.count)) + 6
         #else
-        let largestCompressedSize = deflateBound(&stream, UInt(from.count)) + 6
+        let largestCompressedSize = cziparchive_z_deflateBound(&stream, UInt(from.count)) + 6
         #endif
         let buffer: [UInt8]
         do {
             buffer = try .init(unsafeUninitializedCapacity: Int(largestCompressedSize)) { toBuffer, count in
                 try from.withUnsafeMutableBytes { fromBuffer in
                     stream.avail_in = UInt32(fromBuffer.count)
-                    stream.next_in = CZipZlib_voidPtr_to_BytefPtr(fromBuffer.baseAddress!)
+                    stream.next_in = CZipArchiveZlib_voidPtr_to_BytefPtr(fromBuffer.baseAddress!)
                     stream.avail_out = UInt32(toBuffer.count)
-                    stream.next_out = CZipZlib_voidPtr_to_BytefPtr(toBuffer.baseAddress!)
+                    stream.next_out = CZipArchiveZlib_voidPtr_to_BytefPtr(toBuffer.baseAddress!)
 
-                    let rt = CZipZlib.deflate(&stream, Z_FINISH)
+                    let rt = cziparchive_z_deflate(&stream, CZIPARCHIVE_Z_FINISH)
                     switch rt {
-                    case Z_OK:
+                    case CZIPARCHIVE_Z_OK:
                         throw ZipArchiveReaderError.compressionError
-                    case Z_BUF_ERROR:
+                    case CZIPARCHIVE_Z_BUF_ERROR:
                         throw ZipArchiveReaderError.compressionError
-                    case Z_DATA_ERROR:
+                    case CZIPARCHIVE_Z_DATA_ERROR:
                         throw ZipArchiveReaderError.compressionError
-                    case Z_MEM_ERROR:
+                    case CZIPARCHIVE_Z_MEM_ERROR:
                         throw ZipArchiveReaderError.compressionError
-                    case Z_STREAM_END:
+                    case CZIPARCHIVE_Z_STREAM_END:
                         break
                     default:
                         throw ZipArchiveReaderError.compressionError
                     }
-                    count = stream.next_out - CZipZlib_voidPtr_to_BytefPtr(toBuffer.baseAddress)
+                    count = stream.next_out - CZipArchiveZlib_voidPtr_to_BytefPtr(toBuffer.baseAddress)
                 }
             }
         } catch {
-            let rt = deflateEnd(&stream)
-            assert(rt == Z_OK)
+            let rt = cziparchive_z_deflateEnd(&stream)
+            assert(rt == CZIPARCHIVE_Z_OK)
             throw error
         }
-        let deflateRT = deflateEnd(&stream)
+        let deflateRT = cziparchive_z_deflateEnd(&stream)
         switch deflateRT {
-        case Z_DATA_ERROR:
+        case CZIPARCHIVE_Z_DATA_ERROR:
             throw ZipArchiveReaderError.compressionError
-        case Z_STREAM_END:
+        case CZIPARCHIVE_Z_STREAM_END:
             throw ZipArchiveReaderError.compressionError
         default:
             break

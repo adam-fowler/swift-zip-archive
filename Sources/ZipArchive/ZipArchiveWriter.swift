@@ -1,4 +1,3 @@
-import CZipZlib
 import SystemPackage
 
 #if canImport(FoundationEssentials)

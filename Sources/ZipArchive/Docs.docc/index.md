@@ -2,8 +2,6 @@
 
 A library for reading and editing zip archives.
 
-## Overview
-
 Zip archives are a standard method for collating, compressing and encrypting collections of files. They are universally used to aggregate, compress, and encrypt files into a single interoperable container. `ZipArchive` provides support for reading and writing zip archives from either memory or disk.
 
 ## Reading Zip archives
@@ -20,7 +18,7 @@ let fileContents = try ZipArchiveReader.withFile("MyFile.zip") { reader in
 
 ## Writing Zip Archives
 
-The ``ZipArchiveWriter`` is used to write zip archives. You can use ``ZipArchiveWriter.withFile(_:options:process:)`` to either create a new zip archive or append files to an existing zip archive. This function has a closure parameter in which you can add new files to the zip using the provided `ZipArchiveWriter`. When you exit the closure the zip archive is finalized ie the directory and end of directory sections are written to disk and file descriptor is closed. The following loads zip archive MyFile.zip and then appends a new file called Hello.txt to the archive.
+The ``ZipArchiveWriter`` is used to write zip archives. You can use ``ZipArchiveWriter.withFile(_:options:configuration:process:)`` to either create a new zip archive or append files to an existing zip archive. This function has a closure parameter in which you can add new files to the zip using the provided `ZipArchiveWriter`. When you exit the closure the zip archive is finalized ie the directory and end of directory sections are written to disk and file descriptor is closed. The following loads zip archive MyFile.zip and then appends a new file called Hello.txt to the archive.
 
 ```swift
 try ZipArchiveWriter.withFile("MyFile.zip") { writer in

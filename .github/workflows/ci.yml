@@ -71,19 +71,6 @@ jobs:
         with:
           branch: swift-6.3-release
           tag: 6.3-RELEASE
-      - name: Download zlib
-        run: |
-          curl -L -o zlib.zip https://www.zlib.net/zlib132.zip
-          mkdir zlib-132
-          tar -xf zlib.zip -C zlib-132 --strip-components=1
-      - name: Build and install zlib
-        run: |
-          cd zlib-132
-          mkdir build
-          cd build
-          cmake ..
-          cmake --build . --config Release
-          cmake --install . --prefix ../install
       - name: Checkout
         uses: actions/checkout@v6
       - name: Swift version
@@ -91,4 +78,4 @@ jobs:
           swift --version
       - name: Test
         run: |
-          swift test -Xcc -I'C:/Program Files (x86)/zlib/include' -Xlinker -L'C:/Program Files (x86)/zlib/lib'
+          swift test

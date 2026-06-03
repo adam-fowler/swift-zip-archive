@@ -15,12 +15,12 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "CZipZlib"
+            name: "CZipArchiveZlib"
         ),
         .target(
             name: "ZipArchive",
             dependencies: [
-                "CZipZlib",
+                "CZipArchiveZlib",
                 .product(name: "SystemPackage", package: "swift-system"),
             ]
         ),

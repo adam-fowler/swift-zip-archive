@@ -53,7 +53,7 @@ let fileHeader = directory.first { $0.filename == "File.txt"}
 let fileContents = try reader.readFile(fileHeader)
 ```
 
-To write to a zip archive in memory you can create a `ZipArchiveWriter` from a buffer. When you want to create your finalized zip archive with a complete directory you call ``ZipArchiveWriter/finalizeBuffer()->Storage.Buffer`` which will return the complete zip archive.
+To write to a zip archive in memory you can create a `ZipArchiveWriter` from a buffer. When you want to create your finalized zip archive with a complete directory you call ``ZipArchiveWriter/finalizeBuffer()->Storage.OutputBuffer`` which will return the complete zip archive.
 
 ```swift
 let writer = try ZipArchiveWriter(buffer: zipArchiveMemoryBuffer)

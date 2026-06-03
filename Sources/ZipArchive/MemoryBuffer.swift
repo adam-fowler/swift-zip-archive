@@ -7,17 +7,11 @@
 //
 
 @usableFromInline
-struct MemoryBuffer<Bytes: RangeReplaceableCollection> where Bytes.Element == UInt8, Bytes.Index == Int {
+struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index == Int {
     @usableFromInline
     var buffer: Bytes.SubSequence
     @usableFromInline
     var position: Bytes.Index
-
-    @usableFromInline
-    init() {
-        self.buffer = Bytes()[...]
-        self.position = self.buffer.startIndex
-    }
 
     @usableFromInline
     init(size: Int) where Bytes == [UInt8] {
@@ -39,21 +33,6 @@ struct MemoryBuffer<Bytes: RangeReplaceableCollection> where Bytes.Element == UI
         let position = self.position
         self.position = buffer.index(self.position, offsetBy: count)
         return self.buffer[position..<self.position]
-    }
-
-    @usableFromInline
-    mutating func write<WriteBytes: Collection>(bytes: WriteBytes) where WriteBytes.Element == UInt8 {
-        if self.position == self.buffer.endIndex {
-            self.buffer.append(contentsOf: bytes)
-            self.position = self.buffer.endIndex
-        } else if bytes.count <= buffer.distance(from: self.position, to: self.buffer.endIndex) {
-            let replaceEndIndex = buffer.index(self.position, offsetBy: bytes.count)
-            self.buffer.replaceSubrange(self.position..<replaceEndIndex, with: bytes)
-            self.position = replaceEndIndex
-        } else {
-            self.buffer.replaceSubrange(self.position..., with: bytes)
-            self.position = self.buffer.endIndex
-        }
     }
 
     @usableFromInline
@@ -102,25 +81,6 @@ struct MemoryBuffer<Bytes: RangeReplaceableCollection> where Bytes.Element == UI
     public mutating func readIntegers<each T: FixedWidthInteger>(_ type: repeat (each T).Type) throws(MemoryBufferError) -> (repeat each T) {
         (repeat try self.readInteger(as: (each T).self))
     }
-
-    @inlinable
-    public mutating func writeString(_ string: String) {
-        self.write(bytes: string.utf8)
-    }
-
-    @inlinable
-    public mutating func writeInteger<T: FixedWidthInteger>(
-        _ value: T
-    ) {
-        withUnsafeBytes(of: value.littleEndian) { valuePtr in
-            write(bytes: valuePtr)
-        }
-    }
-
-    @inlinable
-    public mutating func writeIntegers<each T: FixedWidthInteger>(_ value: repeat each T) {
-        (repeat self.writeInteger(each value))
-    }
 }
 
 extension MemoryBuffer: CustomStringConvertible {
@@ -139,4 +99,46 @@ extension MemoryBuffer: CustomStringConvertible {
 enum MemoryBufferError: Error {
     case readingPastEndOfBuffer
     case offsetOutOfRange
+}
+
+extension MemoryBuffer where Bytes: RangeReplaceableCollection {
+    @usableFromInline
+    init() {
+        self.buffer = Bytes()[...]
+        self.position = self.buffer.startIndex
+    }
+
+    @usableFromInline
+    mutating func write<WriteBytes: Collection>(bytes: WriteBytes) where WriteBytes.Element == UInt8 {
+        if self.position == self.buffer.endIndex {
+            self.buffer.append(contentsOf: bytes)
+            self.position = self.buffer.endIndex
+        } else if bytes.count <= buffer.distance(from: self.position, to: self.buffer.endIndex) {
+            let replaceEndIndex = buffer.index(self.position, offsetBy: bytes.count)
+            self.buffer.replaceSubrange(self.position..<replaceEndIndex, with: bytes)
+            self.position = replaceEndIndex
+        } else {
+            self.buffer.replaceSubrange(self.position..., with: bytes)
+            self.position = self.buffer.endIndex
+        }
+    }
+
+    @inlinable
+    mutating func writeString(_ string: String) {
+        self.write(bytes: string.utf8)
+    }
+
+    @inlinable
+    mutating func writeInteger<T: FixedWidthInteger>(
+        _ value: T
+    ) {
+        withUnsafeBytes(of: value.littleEndian) { valuePtr in
+            write(bytes: valuePtr)
+        }
+    }
+
+    @inlinable
+    mutating func writeIntegers<each T: FixedWidthInteger>(_ value: repeat each T) {
+        (repeat self.writeInteger(each value))
+    }
 }

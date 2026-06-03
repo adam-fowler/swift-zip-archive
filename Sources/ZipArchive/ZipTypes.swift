@@ -6,12 +6,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import SystemPackage
+public import SystemPackage
 
 #if canImport(FoundationEssentials)
-import FoundationEssentials
+public import FoundationEssentials
 #else
-import Foundation
+public import Foundation
 #endif
 
 /// Zip file types

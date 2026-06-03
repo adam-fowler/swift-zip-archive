@@ -8,8 +8,18 @@
 
 import SystemPackage
 
-#if os(Windows)
-import Foundation
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif canImport(Darwin)
+import Darwin.C
+#elseif canImport(Android)
+import Android
+#elseif os(Windows)
+import FoundationEssentials
+#else
+#error("Unsupported platform")
 #endif
 
 #if !os(Windows)
@@ -89,11 +99,13 @@ struct DirectoryDescriptor {
 struct DirectoryDescriptor {
     /// Do shallow parse of files in a directory
     static func forFilesInDirectory(_ folder: FilePath, operation: (FilePath, Bool) throws -> Void) throws {
-        let fileURL = URL(fileURLWithPath: folder.string, isDirectory: true)
-        let urls = try FileManager.default.contentsOfDirectory(at: fileURL, includingPropertiesForKeys: [.isDirectoryKey])
-        for url in urls {
-            let path = folder.appending(url.lastPathComponent)
-            try operation(path, url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true)
+        //let fileURL = URL(fileURLWithPath: folder.string, isDirectory: true)
+        let files = try FileManager.default.contentsOfDirectory(atPath: folder.string)
+        for file in files {
+            let path = folder.appending(file)
+            var isDirectory: Bool = false
+            guard FileManager.default.fileExists(atPath: path.string, isDirectory: &isDirectory) else { continue }
+            try operation(path, isDirectory)
         }
     }
 

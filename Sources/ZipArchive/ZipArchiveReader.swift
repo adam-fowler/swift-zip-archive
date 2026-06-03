@@ -17,11 +17,11 @@ import Foundation
 /// ZipArchiveReader configuration
 public struct ZipArchiveReaderConfiguration {
     /// Additional supported compression methods
-    public var compressionMethods: [ZipCompression]
+    public var compressionMethods: [any ZipCompression]
 
     /// Initialize ZipArchiveReaderConfiguration
     /// - Parameter compressionMethods: Additional supported compression methods
-    public init(compressionMethods: [ZipCompression] = []) {
+    public init(compressionMethods: [any ZipCompression] = []) {
         self.compressionMethods = compressionMethods
     }
 }

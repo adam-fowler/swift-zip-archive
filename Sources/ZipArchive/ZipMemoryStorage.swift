@@ -7,15 +7,10 @@
 //
 
 /// Storage in a memory buffer
-public final class ZipMemoryStorage<Bytes: RangeReplaceableCollection>: ZipReadableStorage, ZipWriteableStorage
+public final class ZipMemoryStorage<Bytes: Collection>: ZipReadableStorage
 where Bytes.Element == UInt8, Bytes.Index == Int {
     @usableFromInline
     var buffer: MemoryBuffer<Bytes>
-
-    @inlinable
-    public init() {
-        self.buffer = .init()
-    }
 
     @inlinable
     init(_ buffer: Bytes) {
@@ -26,20 +21,6 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
     public func read(_ count: Int) throws(ZipStorageError) -> Bytes.SubSequence {
         do {
             return try self.buffer.read(count)
-        } catch {
-            throw .init(from: error)
-        }
-    }
-
-    @inlinable
-    public func write<WriteBytes: Collection>(bytes: WriteBytes) where WriteBytes.Element == UInt8 {
-        self.buffer.write(bytes: bytes)
-    }
-
-    @inlinable
-    public func truncate(_ size: Int64) throws(ZipStorageError) {
-        do {
-            try self.buffer.truncate(size)
         } catch {
             throw .init(from: error)
         }
@@ -80,6 +61,27 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
 
     @inlinable
     public var length: Int { self.buffer.length }
+}
+
+extension ZipMemoryStorage: ZipWriteableStorage where Bytes: RangeReplaceableCollection {
+    @inlinable
+    public convenience init() {
+        self.init(.init())
+    }
+
+    @inlinable
+    public func write<WriteBytes: Collection>(bytes: WriteBytes) where WriteBytes.Element == UInt8 {
+        self.buffer.write(bytes: bytes)
+    }
+
+    @inlinable
+    public func truncate(_ size: Int64) throws(ZipStorageError) {
+        do {
+            try self.buffer.truncate(size)
+        } catch {
+            throw .init(from: error)
+        }
+    }
 }
 
 extension ZipStorageError {

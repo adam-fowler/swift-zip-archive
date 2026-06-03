@@ -17,7 +17,8 @@ import Darwin.C
 #elseif canImport(Android)
 import Android
 #elseif os(Windows)
-import FoundationEssentials
+// FileManager.default.contentsOfDirectory(at:includingPropertiesForKeys:) requires Foundation :-(
+import Foundation
 #else
 #error("Unsupported platform")
 #endif

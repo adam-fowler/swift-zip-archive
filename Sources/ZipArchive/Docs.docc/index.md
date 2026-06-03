@@ -6,7 +6,7 @@ Zip archives are a standard method for collating, compressing and encrypting col
 
 ### Reading Zip archives
 
-To parse a zip archive stored on disk use the function ``ZipArchiveReader/withFile(_:process:)``. This creates a ``ZipArchiveReader`` that can be used in the supplied closure to read the directory from a zip file and then read individual files.
+To parse a zip archive stored on disk use the function ``ZipArchiveReader/withFile(_:configuration:process:)``. This creates a ``ZipArchiveReader`` that can be used in the supplied closure to read the directory from a zip file and then read individual files.
 
 ```swift
 let fileContents = try ZipArchiveReader.withFile("MyFile.zip") { reader in
@@ -53,7 +53,7 @@ let fileHeader = directory.first { $0.filename == "File.txt"}
 let fileContents = try reader.readFile(fileHeader)
 ```
 
-To write to a zip archive in memory you can create a `ZipArchiveWriter` from a buffer. When you want to create your finalized zip archive with a complete directory you call ``ZipArchiveWriter/finalizeBuffer()`` which will return the complete zip archive.
+To write to a zip archive in memory you can create a `ZipArchiveWriter` from a buffer. When you want to create your finalized zip archive with a complete directory you call ``ZipArchiveWriter/finalizeBuffer()->Storage.Buffer`` which will return the complete zip archive.
 
 ```swift
 let writer = try ZipArchiveWriter(buffer: zipArchiveMemoryBuffer)

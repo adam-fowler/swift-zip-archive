@@ -16,16 +16,19 @@ public protocol ZipReadableStorage: ZipStorage {
     /// Buffer type returned by `read`
     associatedtype Buffer: RangeReplaceableCollection where Buffer.Element == UInt8, Buffer.Index == Int
     ///  Read so many bytes from storage
-    /// - Parameter count: Number of bytes to read
+    /// - Parameters
+    ///   - count: Number of bytes to read
     /// - Returns: Bytes read from storage
     /// - Throws: ``ZipStorageError``
     func read(_ count: Int) throws(ZipStorageError) -> Buffer
     /// Seek to position in storage
-    /// - Parameter index: Absolute offset in file
+    /// - Parameters
+    ///   - index: Absolute offset in file
     /// - Throws: ``ZipStorageError``
     @discardableResult func seek(_ index: Int64) throws(ZipStorageError) -> Int64
     /// Seek to position relative to current position
-    /// - Parameter offset: Relative offset in file
+    /// - Parameters
+    ///   - offset: Relative offset in file
     /// - Returns: Absolute offset after seek
     /// - Throws: ``ZipStorageError``
     @discardableResult func seekOffset(_ offset: Int64) throws(ZipStorageError) -> Int64

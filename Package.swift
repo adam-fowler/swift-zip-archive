@@ -14,9 +14,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-system.git", from: "1.4.0")
     ],
     targets: [
-        .target(
-            name: "CZipArchiveZlib"
-        ),
+        .target(name: "CZipArchiveZlib"),
         .target(
             name: "ZipArchive",
             dependencies: [

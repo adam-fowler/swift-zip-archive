@@ -1,3 +1,11 @@
+//
+// This source file is part of the swift-zip-archive project
+// Copyright (c) 2025-2026 the swift-zip-archive project authors
+//
+// See LICENSE for license information
+// SPDX-License-Identifier: Apache-2.0
+//
+
 /// Protocol for storage of a Zip archive
 public protocol ZipStorage {
     func currentPosition() throws(ZipStorageError) -> Int64
@@ -8,23 +16,26 @@ public protocol ZipReadableStorage: ZipStorage {
     /// Buffer type returned by `read`
     associatedtype Buffer: RangeReplaceableCollection where Buffer.Element == UInt8, Buffer.Index == Int
     ///  Read so many bytes from storage
-    /// - Parameter count: Number of bytes to read
-    /// - Throws: ``ZipStorageError``
+    /// - Parameters
+    ///   - count: Number of bytes to read
     /// - Returns: Bytes read from storage
+    /// - Throws: ``ZipStorageError``
     func read(_ count: Int) throws(ZipStorageError) -> Buffer
     /// Seek to position in storage
-    /// - Parameter index: Absolute offset in file
+    /// - Parameters
+    ///   - index: Absolute offset in file
     /// - Throws: ``ZipStorageError``
     @discardableResult func seek(_ index: Int64) throws(ZipStorageError) -> Int64
     /// Seek to position relative to current position
-    /// - Parameter offset: Relative offset in file
-    /// - Throws: ``ZipStorageError``
+    /// - Parameters
+    ///   - offset: Relative offset in file
     /// - Returns: Absolute offset after seek
+    /// - Throws: ``ZipStorageError``
     @discardableResult func seekOffset(_ offset: Int64) throws(ZipStorageError) -> Int64
     ///  Seek to position relative to end of file
     /// - Parameter offset: Offset relative to end of file
-    /// - Throws: ``ZipStorageError``
     /// - Returns: Absolute offset after seek
+    /// - Throws: ``ZipStorageError``
     @discardableResult func seekEnd(_ offset: Int64) throws(ZipStorageError) -> Int64
 }
 
@@ -37,8 +48,8 @@ extension ZipReadableStorage {
 extension ZipReadableStorage {
     /// Read integer from buffer
     /// - Parameter as: Integer type to read
-    /// - Throws: ``ZipStorageError``
     /// - Returns: Value read from storage
+    /// - Throws: ``ZipStorageError``
     @inlinable
     public func readInteger<T: FixedWidthInteger>(
         as: T.Type = T.self
@@ -53,8 +64,8 @@ extension ZipReadableStorage {
 
     /// Read string of length from buffer
     /// - Parameter length: Length of string in bytes.
-    /// - Throws: ``ZipStorageError``
     /// - Returns: String read from storage
+    /// - Throws: ``ZipStorageError``
     @inlinable
     public func readString(length: Int) throws(ZipStorageError) -> String {
         let buffer = try read(length)
@@ -63,8 +74,8 @@ extension ZipReadableStorage {
 
     /// Read buffer and copy into array of `UInt8`
     /// - Parameter length: Length of buffer to read
-    /// - Throws: ``ZipStorageError``
     /// - Returns: Array read from storage
+    /// - Throws: ``ZipStorageError``
     @inlinable
     public func readBytes(length: Int) throws(ZipStorageError) -> [UInt8] {
         let buffer = try read(length)
@@ -73,8 +84,8 @@ extension ZipReadableStorage {
 
     /// Read a list of integers from storage
     /// - Parameter type: list of integer types to read
-    /// - Throws: ``ZipStorageError``
     /// - Returns: Integers read from storage
+    /// - Throws: ``ZipStorageError``
     @inlinable
     public func readIntegers<each T: FixedWidthInteger>(_ type: repeat (each T).Type) throws(ZipStorageError) -> (repeat each T) {
         func memorySize<Value>(_ value: Value.Type) -> Int {

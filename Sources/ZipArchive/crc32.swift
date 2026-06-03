@@ -1,3 +1,11 @@
+//
+// This source file is part of the swift-zip-archive project
+// Copyright (c) 2025-2026 the swift-zip-archive project authors
+//
+// See LICENSE for license information
+// SPDX-License-Identifier: Apache-2.0
+//
+
 @usableFromInline
 typealias CRC32 = UInt32
 

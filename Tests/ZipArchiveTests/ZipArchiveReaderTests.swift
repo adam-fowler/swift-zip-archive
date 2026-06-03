@@ -13,7 +13,7 @@ import Testing
 @testable import ZipArchive
 
 struct ZipArchiveReaderTests {
-    @Test func testMSDOSDateAndBack() async throws {
+    @Test func testMSDOSDateAndBack() throws {
         let msdosDate = 3 | (6 << 5) | (24 << 9)
         let msdosTime = 21 | (45 << 5) | (19 << 11)
         let date = Date(msdosTime: UInt16(msdosTime), msdosDate: UInt16(msdosDate))

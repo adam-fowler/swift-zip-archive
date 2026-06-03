@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import SystemPackage
+public import SystemPackage
 
 extension ZipArchiveReader {
     ///  Extract the contents of the zip file into a directory

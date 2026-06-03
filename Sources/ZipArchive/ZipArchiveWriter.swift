@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import SystemPackage
+public import SystemPackage
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -17,11 +17,11 @@ import Foundation
 /// Zip Archive writer configuration
 public struct ZipArchiveWriterConfiguration {
     /// Compression method to use
-    public var compression: ZipCompression
+    public var compression: any ZipCompression
 
     ///  Initialize ZipArchiveWriterConfiguration
     /// - Parameter compression: Compression method to use
-    public init(compression: ZipCompression = ZlibDeflateCompression()) {
+    public init(compression: any ZipCompression = ZlibDeflateCompression()) {
         self.compression = compression
     }
 }
@@ -114,7 +114,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     ///
     /// Writes directory and end of directory sections
     /// - Returns: Buffer containing finalized zip archive
-    public func finalizeBuffer() throws -> Storage.Buffer where Storage: ZipMemoryStorage<[UInt8]> {
+    public func finalizeBuffer() throws -> Storage.OutputBuffer where Storage: ZipMemoryStorage<[UInt8]> {
         try writeDirectory()
         return self.storage.buffer.buffer
     }
@@ -123,7 +123,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     ///
     /// Writes directory and end of directory sections
     /// - Returns: Buffer containing finalized zip archive
-    public func finalizeBuffer() throws -> Storage.Buffer where Storage: ZipMemoryStorage<ArraySlice<UInt8>> {
+    public func finalizeBuffer() throws -> Storage.OutputBuffer where Storage: ZipMemoryStorage<ArraySlice<UInt8>> {
         try writeDirectory()
         return self.storage.buffer.buffer
     }

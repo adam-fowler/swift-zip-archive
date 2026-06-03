@@ -8,8 +8,18 @@
 
 import SystemPackage
 
-#if os(Windows)
-import Foundation
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif canImport(Darwin)
+import Darwin.C
+#elseif canImport(Android)
+import Android
+#elseif os(Windows)
+import FoundationEssentials
+#else
+#error("Unsupported platform")
 #endif
 
 #if !os(Windows)

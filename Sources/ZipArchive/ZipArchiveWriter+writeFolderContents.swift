@@ -32,15 +32,15 @@ extension ZipArchiveWriter {
             rootFolder.removeLastComponent()
         }
         func _writeFolderContents(_ folder: FilePath, options: WriteFolderOptions) throws {
-            try DirectoryDescriptor.forFilesInDirectory(folder) { filePath, isDirectory in
+            try DirectoryDescriptor.forFilesInDirectory(folder) { filePath, fileType in
                 guard options.contains(.includeHiddenFiles) || filePath.lastComponent?.string.first != "." else {
                     return
                 }
-                if isDirectory {
+                if fileType == .directory {
                     if options.contains(.recursive) {
                         try _writeFolderContents(filePath, options: options)
                     }
-                } else {
+                } else if fileType == .regular {
                     var zipFilePath = filePath
                     _ = zipFilePath.removePrefix(rootFolder)
                     try self.writeFile(filePath: zipFilePath, sourceFilePath: filePath, password: nil)

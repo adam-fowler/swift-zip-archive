@@ -52,7 +52,12 @@ extension ZipArchiveWriter {
                 } else {
                     var zipFilePath = filePath
                     _ = zipFilePath.removePrefix(rootFolder)
-                    try self.writeFile(filePath: zipFilePath, sourceFilePath: filePath, password: nil)
+                    do {
+                        try self.writeFile(filePath: zipFilePath, sourceFilePath: filePath, password: nil)
+                    } catch let error as Errno where error == .noSuchFileOrDirectory {
+                        // ignore errors where file was deleted during process
+                        return
+                    }
                 }
             }
         }

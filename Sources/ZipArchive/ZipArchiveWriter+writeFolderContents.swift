@@ -45,19 +45,19 @@ extension ZipArchiveWriter {
                     return
                 }
                 guard filter(filePath, isDirectory) else { return }
-                if isDirectory {
-                    if options.contains(.recursive) {
-                        try _writeFolderContents(filePath, options: options)
-                    }
-                } else {
-                    var zipFilePath = filePath
-                    _ = zipFilePath.removePrefix(rootFolder)
-                    do {
+                do {
+                    if isDirectory {
+                        if options.contains(.recursive) {
+                            try _writeFolderContents(filePath, options: options)
+                        }
+                    } else {
+                        var zipFilePath = filePath
+                        _ = zipFilePath.removePrefix(rootFolder)
                         try self.writeFile(filePath: zipFilePath, sourceFilePath: filePath, password: nil)
-                    } catch let error as Errno where error == .noSuchFileOrDirectory {
-                        // ignore errors where file was deleted during process
-                        return
                     }
+                } catch let error as Errno where error == .noSuchFileOrDirectory {
+                    // ignore errors where file was deleted during process
+                    return
                 }
             }
         }

@@ -99,7 +99,6 @@ struct DirectoryDescriptor {
 struct DirectoryDescriptor {
     /// Do shallow parse of files in a directory
     static func forFilesInDirectory(_ folder: FilePath, operation: (FilePath, Bool) throws -> Void) throws {
-        //let fileURL = URL(fileURLWithPath: folder.string, isDirectory: true)
         let files = try FileManager.default.contentsOfDirectory(atPath: folder.string)
         for file in files {
             let path = folder.appending(file)

@@ -12,6 +12,12 @@ import Testing
 @testable import ZipArchive
 
 struct ZipArchiveWriterTests {
+    var rootFolder: FilePath {
+        FilePath(#filePath)
+            .removingLastComponent()
+            .removingLastComponent()
+            .removingLastComponent()
+    }
     @Test
     func testCreateEmptyZipArchive() throws {
         let writer = ZipArchiveWriter()
@@ -176,14 +182,29 @@ struct ZipArchiveWriterTests {
     func testWritingFolderContents() throws {
         let writer = ZipArchiveWriter()
         // write contents of sources folder into zip
-        try writer.writeFolderContents("./Sources", options: [.recursive, .includeContainingFolder])
-        try writer.writeFolderContents("./Tests", options: .recursive)
+        try writer.writeFolderContents(rootFolder.appending("Sources"), options: [.recursive, .includeContainingFolder])
+        try writer.writeFolderContents(rootFolder.appending("Tests"), options: .recursive)
         let buffer = try writer.finalizeBuffer()
 
         let reader = try ZipArchiveReader(buffer: buffer)
         let directory = try reader.readDirectory()
         #expect(directory.first { $0.filename == "Sources/ZipArchive/ZipStorage.swift" } != nil)
         #expect(directory.first { $0.filename == "ZipArchiveTests/EncryptionTests.swift" } != nil)
+    }
+
+    @Test
+    func testWritingFolderContentsFilter() throws {
+        let writer = ZipArchiveWriter()
+        // write contents of sources folder into zip
+        try writer.writeFolderContents(rootFolder, options: [.recursive, .includeHiddenFiles]) { filePath, isDirectory in
+            filePath.lastComponent != ".build" && filePath.lastComponent != ".git"
+        }
+        let buffer = try writer.finalizeBuffer()
+
+        let reader = try ZipArchiveReader(buffer: buffer)
+        let directory = try reader.readDirectory()
+        #expect(directory.first { $0.filename == ".build" } == nil)
+        #expect(directory.first { $0.filename == ".gitignore" } != nil)
     }
 
     @Test

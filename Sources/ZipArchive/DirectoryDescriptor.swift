@@ -26,6 +26,29 @@ import FoundationEssentials
 
 /// DirectoryDescriptor using C functions
 struct DirectoryDescriptor {
+    enum FileType {
+        case regular
+        case directory
+        case symbolicLink
+        case fifo
+        case socket
+        case blockDevice
+        case unknown
+
+        init(rawValue: UInt8) {
+            self =
+                switch Int32(rawValue) {
+                case DT_DIR: .directory
+                case DT_REG: .regular
+                case DT_LNK: .symbolicLink
+                case DT_SOCK: .socket
+                case DT_FIFO: .fifo
+                case DT_BLK: .blockDevice
+                default: .unknown
+                }
+        }
+    }
+
     let rawValue: system_DIRPtr
 
     init(_ folder: FilePath) throws {
@@ -61,7 +84,7 @@ struct DirectoryDescriptor {
     }
 
     /// Do shallow parse of files in a directory
-    static func forFilesInDirectory(_ folder: FilePath, operation: (FilePath, Bool) throws -> Void) throws {
+    static func forFilesInDirectory(_ folder: FilePath, operation: (FilePath, FileType) throws -> Void) throws {
         let dirDescriptor = try DirectoryDescriptor(folder)
         try dirDescriptor.closeAfter {
             while let dirent = system_readdir(dirDescriptor.rawValue) {
@@ -74,7 +97,7 @@ struct DirectoryDescriptor {
                     let ptr = pointer.baseAddress!.assumingMemoryBound(to: CChar.self)
                     return FilePath(platformString: ptr)
                 }
-                try operation(folder.appending(filename.components), dirent.pointee.d_type == SYSTEM_DT_DIR)
+                try operation(folder.appending(filename.components), FileType(rawValue: dirent.pointee.d_type))
             }
         }
     }
@@ -98,14 +121,14 @@ struct DirectoryDescriptor {
 /// DirectoryDescriptor using FileManager (Required for Windows)
 struct DirectoryDescriptor {
     /// Do shallow parse of files in a directory
-    static func forFilesInDirectory(_ folder: FilePath, operation: (FilePath, Bool) throws -> Void) throws {
+    static func forFilesInDirectory(_ folder: FilePath, operation: (FilePath, FileType) throws -> Void) throws {
         //let fileURL = URL(fileURLWithPath: folder.string, isDirectory: true)
         let files = try FileManager.default.contentsOfDirectory(atPath: folder.string)
         for file in files {
             let path = folder.appending(file)
             var isDirectory: Bool = false
             guard FileManager.default.fileExists(atPath: path.string, isDirectory: &isDirectory) else { continue }
-            try operation(path, isDirectory)
+            try operation(path, isDirectory ? .directory : .regular)
         }
     }
 
@@ -138,8 +161,8 @@ extension DirectoryDescriptor {
 
     /// Resursive parse of files in a directory
     static func recursiveForFilesInDirectory(_ folder: FilePath, operation: (FilePath) throws -> Void) throws {
-        try Self.forFilesInDirectory(folder) { filePath, isDirectory in
-            if isDirectory {
+        try Self.forFilesInDirectory(folder) { filePath, fileType in
+            if fileType == .directory {
                 try recursiveForFilesInDirectory(filePath, operation: operation)
             }
             try operation(filePath)

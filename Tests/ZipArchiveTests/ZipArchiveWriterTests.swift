@@ -187,6 +187,21 @@ struct ZipArchiveWriterTests {
     }
 
     @Test
+    func testWritingFolderContentsFilter() throws {
+        let writer = ZipArchiveWriter()
+        // write contents of sources folder into zip
+        try writer.writeFolderContents(".", options: [.recursive, .includeHiddenFiles]) { filePath, isDirectory in
+            filePath.lastComponent != ".build" && filePath.lastComponent != ".git"
+        }
+        let buffer = try writer.finalizeBuffer()
+
+        let reader = try ZipArchiveReader(buffer: buffer)
+        let directory = try reader.readDirectory()
+        #expect(directory.first { $0.filename == ".build" } == nil)
+        #expect(directory.first { $0.filename == ".gitignore" } != nil)
+    }
+
+    @Test
     func testNoCompression() throws {
         let writer = ZipArchiveWriter(configuration: .init(compression: .noCompression))
         try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8))

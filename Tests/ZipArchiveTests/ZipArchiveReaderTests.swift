@@ -21,6 +21,7 @@ struct ZipArchiveReaderTests {
         #expect(msdosTime == msdosTime2)
         #expect(msdosDate == msdosDate2)
     }
+
     @Test
     func loadZipDirectoryFromMemory() throws {
         let filePath = Bundle.module.fixedUpPath(forResource: "source", ofType: "zip")!
@@ -39,6 +40,17 @@ struct ZipArchiveReaderTests {
         let fileHandle = FileHandle(forReadingAtPath: filePath)
         let data = try #require(try fileHandle?.readToEnd())
         let ZipArchiveReader = try ZipArchiveReader(buffer: data)
+        let zipArchiveDirectory = try ZipArchiveReader.readDirectory()
+        _ = try ZipArchiveReader.readFile(zipArchiveDirectory[2])
+    }
+
+    @Test
+    func loadZipArchiveFromSubSequence() throws {
+        let filePath = Bundle.module.fixedUpPath(forResource: "source", ofType: "zip")!
+        let fileHandle = FileHandle(forReadingAtPath: filePath)
+        let data = try #require(try fileHandle?.readToEnd())
+        let data2 = Data(repeating: 0, count: 256) + data
+        let ZipArchiveReader = try ZipArchiveReader(buffer: data2[256...])
         let zipArchiveDirectory = try ZipArchiveReader.readDirectory()
         _ = try ZipArchiveReader.readFile(zipArchiveDirectory[2])
     }

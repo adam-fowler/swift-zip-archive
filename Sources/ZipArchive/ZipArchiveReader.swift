@@ -294,7 +294,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
     func readExtraFields(_ buffer: [UInt8]) throws -> [Zip.ExtraField] {
         var extraFieldsBuffer = MemoryBuffer(buffer)
         var extraFields: [Zip.ExtraField] = []
-        while extraFieldsBuffer.position < extraFieldsBuffer.length {
+        while extraFieldsBuffer.index < extraFieldsBuffer.length {
             let (header, size) = try extraFieldsBuffer.readIntegers(UInt16.self, UInt16.self)
             let data = try extraFieldsBuffer.read(numericCast(size))
             extraFields.append(.init(header: .init(rawValue: header), data: data))

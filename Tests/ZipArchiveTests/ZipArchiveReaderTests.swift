@@ -211,6 +211,7 @@ struct ZipArchiveReaderTests {
         #expect(Set(files) == Set(["Temp-dontExtractOutsideRootFolder/Hello/Hello.txt", "Temp-dontExtractOutsideRootFolder/Hello"]))
     }
 
+    #if !os(Windows)  // Stat isn't available on Windows
     @Test
     func truncateExtractedFiles() throws {
         var writer = ZipArchiveWriter()
@@ -234,4 +235,5 @@ struct ZipArchiveReaderTests {
         let newFileLength = try Stat("Temp-truncateExtractedFiles/Hello/Hello.txt").size
         #expect(fileLength != newFileLength)
     }
+    #endif
 }

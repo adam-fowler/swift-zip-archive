@@ -17,7 +17,11 @@ extension ZipArchiveReader {
     public func extract(to rootFolder: FilePath, password: String? = nil) throws {
         let directory = try self.readDirectory()
         for entry in directory {
-            let fullFilePath = rootFolder.appending(entry.filename.components)
+            // don't resolve files outside of the root folder
+            guard let fullFilePath = rootFolder.lexicallyResolving(entry.filename) else {
+                continue
+            }
+
             // Is either unix or msdos directory flag set
             if entry.isDirectory {
                 let permissions = entry.externalAttributes.unixAttributes.filePermissions.union([.ownerRead, .ownerExecute])
@@ -28,7 +32,7 @@ extension ZipArchiveReader {
                 let fileDescriptor = try FileDescriptor.open(
                     fullFilePath,
                     .writeOnly,
-                    options: .create,
+                    options: [.create, .truncate],
                     permissions: permissions
                 )
                 _ = try fileDescriptor.closeAfter {

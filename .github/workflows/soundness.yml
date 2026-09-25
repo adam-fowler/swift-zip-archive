@@ -7,8 +7,9 @@ on:
 jobs:
   soundness:
     name: Soundness
-    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.11
+    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.15
     with:
       api_breakage_check_container_image: swift:latest
       docs_check_container_image: swift:latest
+      docs_check_targets: "ZipArchive"
       python_lint_check_enabled: false

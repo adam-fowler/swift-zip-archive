@@ -6,6 +6,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+private import CZipArchiveZlib
+
 @usableFromInline
 typealias CRC32 = UInt32
 
@@ -66,51 +68,14 @@ let crc32Table: [CRC32] =
         0x2D02_EF8D,
     ]
 
-@usableFromInline
-internal func crc32_with_table(crc: CRC32, buffer: UnsafeBufferPointer<UInt8>, table: [CRC32]) -> CRC32 {
-    // use unsafe buffer pointer to avoid array bounds checking on table
-    table.withUnsafeBufferPointer { table in
-        var crc = crc
-        var length = buffer.count
-        crc = crc ^ 0xFFFF_FFFF
-        guard var bufferPtr = buffer.baseAddress else { return 0 }
-        while length >= 8 {
-            crc = table[Int(crc ^ CRC32(bufferPtr.pointee)) & 0xFF] ^ (crc >> 8)
-            bufferPtr = bufferPtr.advanced(by: 1)
-            crc = table[Int(crc ^ CRC32(bufferPtr.pointee)) & 0xFF] ^ (crc >> 8)
-            bufferPtr = bufferPtr.advanced(by: 1)
-            crc = table[Int(crc ^ CRC32(bufferPtr.pointee)) & 0xFF] ^ (crc >> 8)
-            bufferPtr = bufferPtr.advanced(by: 1)
-            crc = table[Int(crc ^ CRC32(bufferPtr.pointee)) & 0xFF] ^ (crc >> 8)
-            bufferPtr = bufferPtr.advanced(by: 1)
-            crc = table[Int(crc ^ CRC32(bufferPtr.pointee)) & 0xFF] ^ (crc >> 8)
-            bufferPtr = bufferPtr.advanced(by: 1)
-            crc = table[Int(crc ^ CRC32(bufferPtr.pointee)) & 0xFF] ^ (crc >> 8)
-            bufferPtr = bufferPtr.advanced(by: 1)
-            crc = table[Int(crc ^ CRC32(bufferPtr.pointee)) & 0xFF] ^ (crc >> 8)
-            bufferPtr = bufferPtr.advanced(by: 1)
-            crc = table[Int(crc ^ CRC32(bufferPtr.pointee)) & 0xFF] ^ (crc >> 8)
-            bufferPtr = bufferPtr.advanced(by: 1)
-            length -= 8
-        }
-        while length > 0 {
-            crc = table[Int(crc ^ CRC32(bufferPtr.pointee)) & 0xFF] ^ (crc >> 8)
-            bufferPtr = bufferPtr.advanced(by: 1)
-            length -= 1
-        }
-        return crc ^ 0xFFFF_FFFF
-    }
-}
-
 /// Calculate CRC32 checksum
 /// - Parameters:
 ///   - crc: base crc
 ///   - bytes: buffer to calculate CRC32 for
 /// - Returns: crc32 checksum
-@inlinable
 func crc32(_ crc: CRC32, bytes: some Collection<UInt8>) -> CRC32 {
     if let rest = bytes.withContiguousStorageIfAvailable({ buffer -> CRC32 in
-        crc32_with_table(crc: crc, buffer: buffer, table: crc32Table)
+        CRC32(cziparchive_z_crc32_z(numericCast(crc), buffer.baseAddress, buffer.count))
     }) {
         return rest
     }

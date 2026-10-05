@@ -13,7 +13,7 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
     var buffer: MemoryBuffer<Bytes>
 
     @inlinable
-    init(_ buffer: Bytes) {
+    init(_ buffer: borrowing Bytes) {
         self.buffer = .init(buffer)
     }
 

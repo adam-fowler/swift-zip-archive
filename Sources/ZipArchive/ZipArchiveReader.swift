@@ -27,61 +27,66 @@ public struct ZipArchiveReaderConfiguration {
 }
 
 /// Zip archive reader type
-public final class ZipArchiveReader<Storage: ZipReadableStorage> {
-    let storage: Storage
+public struct ZipArchiveReader<Storage: ZipReadableStorage & ~Copyable & ~Escapable>: ~Copyable, ~Escapable {
+    var storage: Storage
     let endOfCentralDirectoryRecord: Zip.EndOfCentralDirectory
     let compressionMethods: ZipCompressionMethodsMap
-    var parsingDirectory: Bool
 
-    init(_ file: Storage, configuration: ZipArchiveReaderConfiguration) throws {
+    @_lifetime(copy file)
+    init(_ file: consuming Storage, configuration: ZipArchiveReaderConfiguration) throws {
         self.storage = file
-        self.endOfCentralDirectoryRecord = try Self.readEndOfCentralDirectory(file: file)
+        self.endOfCentralDirectoryRecord = try Self.readEndOfCentralDirectory(file: &self.storage)
 
         let compressionKeyValuePairs = configuration.compressionMethods.map { (key: $0.method, value: $0) }
         self.compressionMethods = [
             Zip.FileCompressionMethod.noCompression: NoZipCompression(),
             Zip.FileCompressionMethod.deflate: ZlibDeflateCompression(),
         ].merging(compressionKeyValuePairs) { first, second in second }
-
-        self.parsingDirectory = false
     }
+}
 
+extension ZipArchiveReader: Copyable where Storage: Copyable & ~Escapable {}
+extension ZipArchiveReader: Escapable where Storage: Escapable & ~Copyable {}
+
+extension ZipArchiveReader {
     /// Initialize ZipArchiveReader to read from a memory buffer
     ///
     /// - Parameters:
     ///   - buffer: Buffer containing zip archive
     ///   - configuration: ZipArchiveReader configuration
     /// - Throws:
-    convenience public init<Bytes: RangeReplaceableCollection>(
-        buffer: Bytes,
+    public init<Bytes: RangeReplaceableCollection>(
+        buffer: borrowing Bytes,
         configuration: ZipArchiveReaderConfiguration = .init()
     ) throws where Bytes.Element == UInt8, Bytes.Index == Int, Storage == ZipMemoryStorage<Bytes> {
         try self.init(ZipMemoryStorage(buffer), configuration: configuration)
     }
+}
 
+extension ZipArchiveReader where Storage: ~Copyable & ~Escapable {
     /// Read directory from zip archive into an array
-    public func readDirectory() throws -> [Zip.FileHeader] {
+    public mutating func readDirectory() throws -> [Zip.FileHeader] {
         try storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
-        let bytes = try storage.read(numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
-        let memoryStorage = ZipMemoryStorage(bytes)
-        return try readDirectory(memoryStorage)
+        return try storage.withBytesReadIntoTemporaryBuffer(
+            count: Int(endOfCentralDirectoryRecord.centralDirectorySize),
+            alignment: 8
+        ) { (bytes) throws(ZipStorageError) in
+            let spanStorage = ZipReadableSpanStorage(bytes)
+            return try readDirectory(spanStorage)
+        }
     }
 
     /// Parse directory from zip file and run process on each entry
     ///
     /// Use this function if you don't want to load the whole of the zip file directory
     /// into memory
-    ///
-    /// WARNING: You cannot call `readFile` while parsing the directory
-    public func parseDirectory(_ process: (Zip.FileHeader) throws -> Void) throws {
-        self.parsingDirectory = true
-        defer {
-            self.parsingDirectory = false
-        }
+    public mutating func parseDirectory(_ process: (Zip.FileHeader) throws -> Void) throws {
         try storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
         for _ in 0..<endOfCentralDirectoryRecord.diskEntries {
             let fileHeader = try self.readFileHeader(from: storage)
+            let position = try storage.currentPosition()
             try process(fileHeader)
+            try storage.seek(position)
         }
     }
 
@@ -91,8 +96,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
     ///   - file: File header, from zip directory
     ///   - password: Password used to decrypt file
     /// - Returns: Buffer containing file
-    public func readFile(_ file: Zip.FileHeader, password: String? = nil) throws -> [UInt8] {
-        precondition(self.parsingDirectory == false, "Cannot read file while parsing the directory")
+    public mutating func readFile(_ file: Zip.FileHeader, password: String? = nil) throws -> [UInt8] {
         try self.storage.seek(numericCast(file.offsetOfLocalHeader))
         let localFileHeader = try readLocalFileHeader()
         guard localFileHeader.filename == file.filename else { throw ZipArchiveReaderError.invalidFileHeader }
@@ -131,7 +135,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
     }
 
     /// Read directory from byffer
-    func readDirectory(_ storage: some ZipReadableStorage) throws -> [Zip.FileHeader] {
+    func readDirectory(_ storage: borrowing some ZipReadableStorage & ~Copyable & ~Escapable) throws -> [Zip.FileHeader] {
         var directory: [Zip.FileHeader] = []
         for _ in 0..<endOfCentralDirectoryRecord.diskEntries {
             let fileHeader = try self.readFileHeader(from: storage)
@@ -140,7 +144,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         return directory
     }
 
-    func readLocalFileHeader() throws -> Zip.LocalFileHeader {
+    mutating func readLocalFileHeader() throws -> Zip.LocalFileHeader {
         let (
             signature, versionNeeded, flags, compression, modTime, modDate, crc32, compressedSize, uncompressedSize, fileNameLength, extraFieldsLength
         ) =
@@ -203,7 +207,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
-    func readFileHeader(from storage: some ZipReadableStorage) throws -> Zip.FileHeader {
+    mutating func readFileHeader(from storage: borrowing some ZipReadableStorage & ~Copyable & ~Escapable) throws -> Zip.FileHeader {
         let (
             signature, versionMadeBy, versionNeeded, flags, compression, modTime, modDate, crc32, compressedSize, uncompressedSize, fileNameLength,
             extraFieldsLength, commentLength, diskStart, internalAttribute, externalAttribute, offsetOfLocalHeader
@@ -291,7 +295,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
-    func readExtraFields(_ buffer: [UInt8]) throws -> [Zip.ExtraField] {
+    mutating func readExtraFields(_ buffer: [UInt8]) throws -> [Zip.ExtraField] {
         var extraFieldsBuffer = MemoryBuffer(buffer)
         var extraFields: [Zip.ExtraField] = []
         while extraFieldsBuffer.index < extraFieldsBuffer.length {
@@ -302,7 +306,9 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         return extraFields
     }
 
-    static func readEndOfCentralDirectory(file: some ZipReadableStorage) throws -> Zip.EndOfCentralDirectory {
+    static func readEndOfCentralDirectory(
+        file: inout some ZipReadableStorage & ~Copyable & ~Escapable
+    ) throws -> Zip.EndOfCentralDirectory {
         _ = try searchForEndOfCentralDirectory(file: file)
 
         let zip64EndOfCentralLocator: Zip.Zip64EndOfCentralLocator?
@@ -375,7 +381,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
-    static func readZip64EndOfCentralLocator(file: some ZipReadableStorage) throws -> Zip.Zip64EndOfCentralLocator? {
+    static func readZip64EndOfCentralLocator(file: inout some ZipReadableStorage & ~Copyable & ~Escapable) throws -> Zip.Zip64EndOfCentralLocator? {
         let (signature, diskNumberCentralDirectoryStarts, relativeOffsetEndOfCentralDirectory, totalNumberOfDisks) = try file.readIntegers(
             UInt32.self,
             UInt32.self,
@@ -390,7 +396,9 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
-    static func readZip64EndOfCentralDirectory(file: some ZipReadableStorage) throws -> Zip.Zip64EndOfCentralDirectory {
+    static func readZip64EndOfCentralDirectory(
+        file: inout some ZipReadableStorage & ~Copyable & ~Escapable
+    ) throws -> Zip.Zip64EndOfCentralDirectory {
         let (
             signature, _, versionNeeded, diskNumber, diskNumberCentralDirectoryStarts, diskEntries, totalEntries, centralDirectorySize,
             offsetOfCentralDirectory
@@ -418,7 +426,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
-    static func searchForEndOfCentralDirectory(file: some ZipReadableStorage) throws -> Int {
+    static func searchForEndOfCentralDirectory(file: inout some ZipReadableStorage & ~Copyable & ~Escapable) throws -> Int {
         let fileChunkLength: Int64 = 1024
         let fileSize = try file.seekEnd(0)
 
@@ -455,15 +463,15 @@ extension ZipArchiveReader where Storage == ZipFileStorage {
     public static func withFile<Value>(
         _ filename: String,
         configuration: ZipArchiveReaderConfiguration = .init(),
-        process: (ZipArchiveReader) throws -> Value
+        process: (inout ZipArchiveReader) throws -> Value
     ) throws -> Value {
         let fileDescriptor = try FileDescriptor.open(
             .init(filename),
             .readOnly
         )
         return try fileDescriptor.closeAfter {
-            let zipArchiveReader = try ZipArchiveReader(ZipFileStorage(fileDescriptor), configuration: configuration)
-            return try process(zipArchiveReader)
+            var zipArchiveReader = try ZipArchiveReader(ZipFileStorage(fileDescriptor), configuration: configuration)
+            return try process(&zipArchiveReader)
         }
     }
 }

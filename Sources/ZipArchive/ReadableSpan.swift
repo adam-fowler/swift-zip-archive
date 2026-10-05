@@ -6,27 +6,69 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-struct ReadableSpan: ~Copyable, ~Escapable {
-    let _bytes: RawSpan
-    var lowerBound: Int
+@inlinable
+public struct ZipReadableSpanStorage: ZipReadableStorage, ~Copyable, ~Escapable {
+    @inlinable
+    public mutating func read(_ count: Int) throws(ZipStorageError) -> [UInt8] {
+        let newPosition = position + count
+        guard newPosition <= self.upperBound else { throw ZipStorageError.readingPastEndOfFile }
+        defer { position = newPosition }
+        return [UInt8].init(capacity: count) { outputBytes in
+            outputBytes.withUnsafeMutableBufferPointer { outputBuffer, outputCount in
+                let extracted = bytes.extracting(position..<position + count)
+                _ = extracted.withUnsafeBytes { buffer in
+                    outputBuffer.update(fromContentsOf: buffer)
+                }
+                outputCount = count
+            }
+        }
+    }
+
+    @inlinable
+    public mutating func withBytesReadIntoTemporaryBuffer<Return>(count: Int, operation: (RawSpan) throws -> Return) throws -> Return {
+        let newPosition = position + count
+        guard newPosition <= self.upperBound else { throw ZipStorageError.readingPastEndOfFile }
+        defer { position = newPosition }
+        return try operation(self.bytes.extracting(position..<newPosition))
+    }
+
+    @inlinable
+    public mutating func seek(_ index: Int64) throws(ZipStorageError) -> Int64 {
+        let newPosition = self.lowerBound + Int(index)
+        guard newPosition <= self.upperBound && newPosition >= lowerBound else { throw .readingPastEndOfFile }
+        self.position = newPosition
+    }
+
+    @inlinable
+    public mutating func seekOffset(_ offset: Int64) throws(ZipStorageError) -> Int64 {
+        let newPosition = self.position + Int(offset)
+        guard newPosition <= self.upperBound && newPosition >= lowerBound else { throw .readingPastEndOfFile }
+        self.position = newPosition
+    }
+
+    @inlinable
+    public mutating func seekEnd(_ offset: Int64) throws(ZipStorageError) -> Int64 {
+        let newPosition = self.upperBound + Int(offset)
+        guard newPosition <= self.upperBound && newPosition >= lowerBound else { throw .readingPastEndOfFile }
+        self.position = newPosition
+    }
+
+    @usableFromInline
+    let bytes: RawSpan
+    @usableFromInline
+    var position: Int
+    @usableFromInline
+    let lowerBound: Int
+    @usableFromInline
     let upperBound: Int
 
     @inlinable
     @_lifetime(copy bytes)
     public init(_ bytes: RawSpan) {
-        self._bytes = bytes
+        self.bytes = bytes
+        self.position = 0
         self.lowerBound = 0
         self.upperBound = bytes.byteCount
-    }
-
-    public var bytes: RawSpan {
-        @inlinable
-        @_lifetime(copy self)
-        borrowing get {
-            unsafe _bytes.extracting(
-                unchecked: Range(uncheckedBounds: (lowerBound, upperBound))
-            )
-        }
     }
 
     @unsafe
@@ -37,9 +79,9 @@ struct ReadableSpan: ~Copyable, ~Escapable {
     mutating func consumeUnchecked<T: FixedWidthInteger & BitwiseCopyable>(
         as: T.Type
     ) -> T {
-        defer { lowerBound += MemoryLayout<T>.stride }
-        return unsafe _bytes.unsafeLoadUnaligned(
-            fromUncheckedByteOffset: lowerBound,
+        defer { position += MemoryLayout<T>.stride }
+        return unsafe bytes.unsafeLoadUnaligned(
+            fromByteOffset: position,
             as: T.self
         )
     }
@@ -48,8 +90,8 @@ struct ReadableSpan: ~Copyable, ~Escapable {
     @inlinable
     @_lifetime(copy self)
     mutating func consumeUnchecked(count: Int) -> RawSpan {
-        let upperBound = lowerBound + count
-        defer { lowerBound = upperBound }
-        return self._bytes.extracting(unchecked: lowerBound..<upperBound)
+        let upperBound = position + count
+        defer { position = upperBound }
+        return self.bytes.extracting(unchecked: position..<upperBound)
     }
 }

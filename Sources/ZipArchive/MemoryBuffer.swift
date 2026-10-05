@@ -22,7 +22,7 @@ struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index
     }
 
     @usableFromInline
-    init(_ buffer: Bytes) {
+    init(_ buffer: borrowing Bytes) {
         self.buffer = buffer[...]
         self.index = self.buffer.startIndex
     }

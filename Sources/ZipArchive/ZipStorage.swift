@@ -7,7 +7,7 @@
 //
 
 /// Protocol for storage of a Zip archive
-public protocol ZipStorage {
+public protocol ZipStorage: ~Copyable, ~Escapable {
     func currentPosition() throws(ZipStorageError) -> Int64
 }
 

@@ -169,15 +169,71 @@ struct ZipArchiveReaderTests {
         try writer.writeFile(filename: "World/World.txt", contents: .init("world!".utf8))
         let buffer = try writer.finalizeBuffer()
         let reader = try ZipArchiveReader(buffer: buffer)
-        try DirectoryDescriptor.mkdir("Temp", options: .ignoreExistingDirectoryError, permissions: [.ownerReadWriteExecute])
+        try DirectoryDescriptor.mkdir("Temp-extractToFolder", options: .ignoreExistingDirectoryError, permissions: [.ownerReadWriteExecute])
         defer {
-            try? DirectoryDescriptor.recursiveDelete("Temp")
+            try? DirectoryDescriptor.recursiveDelete("Temp-extractToFolder")
         }
-        try reader.extract(to: "Temp")
+        try reader.extract(to: "Temp-extractToFolder")
         var files: [FilePath] = []
-        try DirectoryDescriptor.recursiveForFilesInDirectory("Temp") { filePath in
+        try DirectoryDescriptor.recursiveForFilesInDirectory("Temp-extractToFolder") { filePath in
             files.append(filePath)
         }
-        #expect(Set(files) == Set(["Temp/Hello/Hello.txt", "Temp/Hello", "Temp/World/World.txt", "Temp/World"]))
+        #expect(
+            Set(files)
+                == Set([
+                    "Temp-extractToFolder/Hello/Hello.txt", "Temp-extractToFolder/Hello", "Temp-extractToFolder/World/World.txt",
+                    "Temp-extractToFolder/World",
+                ])
+        )
     }
+
+    @Test
+    func dontExtractOutsideRootFolder() throws {
+        let writer = ZipArchiveWriter()
+        try writer.writeFile(filename: "Hello/Hello.txt", contents: .init("Hello,".utf8))
+        try writer.writeFile(filename: "../World.txt", contents: .init("world!".utf8))
+        try writer.writeFile(filename: "test/../../World.txt", contents: .init("world!".utf8))
+        let buffer = try writer.finalizeBuffer()
+        let reader = try ZipArchiveReader(buffer: buffer)
+        try DirectoryDescriptor.mkdir(
+            "Temp-dontExtractOutsideRootFolder",
+            options: .ignoreExistingDirectoryError,
+            permissions: [.ownerReadWriteExecute]
+        )
+        defer {
+            try? DirectoryDescriptor.recursiveDelete("Temp-dontExtractOutsideRootFolder")
+        }
+        try reader.extract(to: "Temp-dontExtractOutsideRootFolder")
+        var files: [FilePath] = []
+        try DirectoryDescriptor.recursiveForFilesInDirectory("Temp-dontExtractOutsideRootFolder") { filePath in
+            files.append(filePath)
+        }
+        #expect(Set(files) == Set(["Temp-dontExtractOutsideRootFolder/Hello/Hello.txt", "Temp-dontExtractOutsideRootFolder/Hello"]))
+    }
+
+    #if !os(Windows)  // Stat isn't available on Windows
+    @Test
+    func truncateExtractedFiles() throws {
+        var writer = ZipArchiveWriter()
+        try writer.writeFile(filename: "Hello/Hello.txt", contents: .init("Hello, world".utf8))
+        var reader = try ZipArchiveReader(buffer: writer.finalizeBuffer())
+        try DirectoryDescriptor.mkdir("Temp-truncateExtractedFiles", options: .ignoreExistingDirectoryError, permissions: [.ownerReadWriteExecute])
+        defer {
+            try? DirectoryDescriptor.recursiveDelete("Temp-truncateExtractedFiles")
+        }
+        try reader.extract(to: "Temp-truncateExtractedFiles")
+        let fileLength = try Stat("Temp-truncateExtractedFiles/Hello/Hello.txt").size
+
+        writer = ZipArchiveWriter()
+        try writer.writeFile(filename: "Hello/Hello.txt", contents: .init("Hello".utf8))
+        reader = try ZipArchiveReader(buffer: writer.finalizeBuffer())
+        try DirectoryDescriptor.mkdir("Temp-truncateExtractedFiles", options: .ignoreExistingDirectoryError, permissions: [.ownerReadWriteExecute])
+        defer {
+            try? DirectoryDescriptor.recursiveDelete("Temp-truncateExtractedFiles")
+        }
+        try reader.extract(to: "Temp-truncateExtractedFiles")
+        let newFileLength = try Stat("Temp-truncateExtractedFiles/Hello/Hello.txt").size
+        #expect(fileLength != newFileLength)
+    }
+    #endif
 }

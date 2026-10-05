@@ -523,7 +523,7 @@ extension ZipArchiveWriter {
         let fileDescriptor = try FileDescriptor.open(
             .init(filename),
             .readWrite,
-            options: options.contains(.create) ? .create : [],
+            options: options.contains(.create) ? [.create, .truncate] : [],
             permissions: options.contains(.create) ? [.ownerReadWrite, .groupRead, .otherRead] : nil
         )
         return try fileDescriptor.closeAfter {

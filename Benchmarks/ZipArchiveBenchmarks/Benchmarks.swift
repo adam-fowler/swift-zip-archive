@@ -1,8 +1,8 @@
 //
-// This source file is part of the Hummingbird server framework project
-// Copyright (c) the Hummingbird authors
+// This source file is part of the swift-zip-archive project
+// Copyright (c) 2025-2026 the swift-zip-archive project authors
 //
-// See LICENSE.txt for license information
+// See LICENSE for license information
 // SPDX-License-Identifier: Apache-2.0
 //
 

@@ -54,3 +54,25 @@ if let target = package.targets.filter({ $0.name == "CZipZlib" }).first {
     target.linkerSettings = [.linkedLibrary("z")]
     #endif
 }
+
+if Context.environment["ENABLE_ZIPARCHIVE_BENCHMARKS"] != nil {
+    package.platforms = [.macOS(.v13), .iOS(.v16), .tvOS(.v16)]
+    package.dependencies.append(
+        .package(url: "https://github.com/ordo-one/benchmark", from: "1.33.0")
+    )
+    package.targets.append(
+        .executableTarget(
+            name: "ZipArchiveBenchmarks",
+            dependencies: [
+                "ZipArchive",
+                //"HummingbirdRouter",
+                .product(name: "Benchmark", package: "benchmark"),
+            ],
+            path: "Benchmarks/ZipArchiveBenchmarks",
+            swiftSettings: defaultSwiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "benchmark")
+            ]
+        )
+    )
+}

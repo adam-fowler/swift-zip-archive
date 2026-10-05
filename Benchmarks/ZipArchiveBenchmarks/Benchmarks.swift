@@ -56,10 +56,26 @@ let benchmarks: @Sendable () -> Void = {
         benchmark.stopMeasurement()
     }
 
+    Benchmark("ZipArchiveReader.readFile") { benchmark in
+        let file = try buildZipFile(numFile: 1, fileSizeRange: 100..<101)
+        let reader = try ZipArchiveReader(buffer: file)
+        let directory = try reader.readDirectory()
+        benchmark.startMeasurement()
+        for _ in benchmark.scaledIterations {
+            let file = directory[0]
+            try blackHole(reader.readFile(file))
+        }
+        benchmark.stopMeasurement()
+    }
+
     func buildZipFile(numFile: Int, fileSizeRange: Range<Int>) throws -> ArraySlice<UInt8> {
         let writer = ZipArchiveWriter()
+        let step = Double(fileSizeRange.upperBound - fileSizeRange.lowerBound) / Double(numFile)
+        var size = Double(fileSizeRange.lowerBound)
         for index in 0..<numFile {
-            try writer.writeFile(filename: "file\(index)", contents: (0..<fileSizeRange.randomElement()!).map { _ in UInt8.random(in: 0...255) })
+            let fileSize = Int(size)
+            try writer.writeFile(filename: "file\(index)", contents: (0..<fileSize).map { _ in UInt8.random(in: 0...255) })
+            size += step
         }
         return try writer.finalizeBuffer()
     }

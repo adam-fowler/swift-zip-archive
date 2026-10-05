@@ -7,3 +7,4 @@ DerivedData/
 /.swiftpm
 /.vscode
 /.devcontainer
+.benchmarkBaselines

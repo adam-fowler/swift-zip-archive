@@ -49,13 +49,13 @@ try writer.writeFile(filename: "Hello.txt", contents: fileContents, password: "t
 It is also possible to use `ZipArchiveReader` and `ZipArchiveWriter` to read and write from a zip archive stored in memory. A `ZipArchiveReader` can be constructed from a memory buffer and then its directory and files can be read in a similar manner to how they with archives stored on disk.
 
 ```swift
-let reader = try ZipFileReader(buffer: zipArchiveMemoryBuffer)
+let reader = try ZipArchiveReader(buffer: zipArchiveMemoryBuffer)
 let directory = try reader.readDirectory()
 let fileHeader = directory.first { $0.filename == "File.txt"}
 let fileContents = try reader.readFile(fileHeader)
 ```
 
-To write to a zip archive in memory you can create a `ZipFileWriter` from a buffer. When you want to create your finalized zip archive with a complete directory you call `ZipFileWriter.finalizeBuffer()` which will return the complete zip archive.
+To write to a zip archive in memory you can create a `ZipArchiveWriter` from a buffer. When you want to create your finalized zip archive with a complete directory you call `ZipArchiveWriter.finalizeBuffer()` which will return the complete zip archive.
 
 ```swift
 let writer = try ZipArchiveWriter(buffer: zipArchiveMemoryBuffer)

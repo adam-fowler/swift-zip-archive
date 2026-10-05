@@ -9,7 +9,7 @@
 private import CZipArchiveZlib
 
 @usableFromInline
-typealias CRC32 = UInt32
+package typealias CRC32 = UInt32
 
 @usableFromInline
 let crc32Table: [CRC32] =
@@ -73,7 +73,7 @@ let crc32Table: [CRC32] =
 ///   - crc: base crc
 ///   - bytes: buffer to calculate CRC32 for
 /// - Returns: crc32 checksum
-func crc32(_ crc: CRC32, bytes: some Collection<UInt8>) -> CRC32 {
+package func crc32(_ crc: CRC32, bytes: some Collection<UInt8>) -> CRC32 {
     if let rest = bytes.withContiguousStorageIfAvailable({ buffer -> CRC32 in
         CRC32(cziparchive_z_crc32_z(numericCast(crc), buffer.baseAddress, buffer.count))
     }) {

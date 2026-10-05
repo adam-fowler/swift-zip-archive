@@ -38,6 +38,28 @@ public struct ZipFileStorage: ZipReadableStorage, ZipWriteableStorage {
         return buffer
     }
 
+    ///  Read so many bytes from storage and store in temporary buffer
+    /// - Parameters
+    ///   - count: Number of bytes to read
+    ///   - operation: closure provided temporary bytes
+    /// - Throws: ``EitherError`` holding either a ``ZipStorageError`` or the error returned by the operation closure
+    public func withTemporaryReadBytes<Return, Failure>(
+        _ count: Int,
+        operation: (ZipMemoryStorage<[UInt8]>) throws(Failure) -> Return
+    ) throws(EitherError<ZipStorageError, Failure>) -> Return {
+        let buffer: [UInt8]
+        do {
+            buffer = try self.read(count)
+        } catch {
+            throw .first(error)
+        }
+        do {
+            return try operation(ZipMemoryStorage(buffer))
+        } catch {
+            throw .second(error)
+        }
+    }
+
     @inlinable
     @discardableResult
     public func seek(_ index: Int64) throws(ZipStorageError) -> Int64 {

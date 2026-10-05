@@ -27,6 +27,24 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
     }
 
     @inlinable
+    public func withTemporaryReadBytes<Return, Failure>(
+        _ count: Int,
+        operation: (ZipMemoryStorage<Bytes.SubSequence>) throws(Failure) -> Return
+    ) throws(EitherError<ZipStorageError, Failure>) -> Return where Failure: Error {
+        let buffer: Bytes.SubSequence
+        do {
+            buffer = try self.read(count)
+        } catch {
+            throw .first(error)
+        }
+        do {
+            return try operation(ZipMemoryStorage<Bytes.SubSequence>(buffer))
+        } catch {
+            throw .second(error)
+        }
+    }
+
+    @inlinable
     @discardableResult
     public func seek(_ baseOffset: Int64) throws(ZipStorageError) -> Int64 {
         do {
@@ -59,6 +77,54 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
 
     @inlinable
     public var length: Int { self.buffer.length }
+
+    /// Read integer from buffer
+    /// - Parameter as: Integer type to read
+    /// - Returns: Value read from storage
+    /// - Throws: ``ZipStorageError``
+    @inlinable
+    public func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
+        as: T.Type = T.self
+    ) throws(ZipStorageError) -> T {
+        let buffer = try read(MemoryLayout<T>.size)
+        var value: T = 0
+        withUnsafeMutableBytes(of: &value) { valuePtr in
+            valuePtr.copyBytes(from: buffer)
+        }
+        return value.littleEndian
+    }
+
+    /// Read string of length from buffer
+    /// - Parameter length: Length of string in bytes.
+    /// - Returns: String read from storage
+    /// - Throws: ``ZipStorageError``
+    @inlinable
+    public func readString(length: Int) throws(ZipStorageError) -> String {
+        let buffer = try read(length)
+        return String(decoding: buffer, as: UTF8.self)
+    }
+
+    /// Read a list of integers from storage
+    /// - Parameter type: list of integer types to read
+    /// - Returns: Integers read from storage
+    /// - Throws: ``ZipStorageError``
+    @inlinable
+    public func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(_ type: repeat (each T).Type) throws(ZipStorageError) -> (repeat each T) {
+        func memorySize<Value>(_ value: Value.Type) -> Int {
+            MemoryLayout<Value>.size
+        }
+        var size = 0
+        for t in repeat each type {
+            size += memorySize(t)
+        }
+        let bytes = try read(size)
+        var buffer = MemoryBuffer(bytes)
+        do {
+            return try buffer.readIntegers(repeat (each type))
+        } catch {
+            throw .init(from: error)
+        }
+    }
 }
 
 extension ZipMemoryStorage: ZipWriteableStorage where Bytes: RangeReplaceableCollection {

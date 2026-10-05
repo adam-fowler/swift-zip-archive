@@ -62,9 +62,9 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
     /// Read directory from zip archive into an array
     public func readDirectory() throws -> [Zip.FileHeader] {
         try storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
-        let bytes = try storage.read(numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
-        let memoryStorage = ZipMemoryStorage(bytes)
-        return try readDirectory(memoryStorage)
+        return try storage.withTemporaryReadBytes(numericCast(endOfCentralDirectoryRecord.centralDirectorySize)) { storage in
+            try readDirectory(storage)
+        }
     }
 
     /// Parse directory from zip file and run process on each entry
@@ -103,14 +103,14 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         var fileSize = file.flags.contains(.dataDescriptor) ? file.compressedSize : localFileHeader.compressedSize
         // if encrypted read encryption header
         if localFileHeader.flags.contains(.encrypted) {
-            encryptionKeys = try self.storage.readBytes(length: 12)
+            encryptionKeys = [UInt8](try self.storage.read(12))
             fileSize -= 12
         } else {
             encryptionKeys = nil
         }
 
         // Read bytes and uncompress
-        var fileBytes = try self.storage.readBytes(length: numericCast(fileSize))
+        var fileBytes = try [UInt8](self.storage.read(numericCast(fileSize)))
 
         // if we have a password and encryption keys
         if let password, var encryptionKeys {
@@ -159,8 +159,10 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
             )
         guard signature == Zip.localFileHeaderSignature else { throw ZipArchiveReaderError.invalidFileHeader }
         let filename = try storage.readString(length: numericCast(fileNameLength))
-        let extraFieldsBuffer = try storage.readBytes(length: numericCast(extraFieldsLength))
-        let extraFields = try readExtraFields(extraFieldsBuffer)
+        let extraFieldsLengthInt = Int(extraFieldsLength)
+        let extraFields = try storage.withTemporaryReadBytes(extraFieldsLengthInt) { storage in
+            try readExtraFields(storage, storageSize: extraFieldsLengthInt)
+        }
 
         /// Extract ZIP64 extra field
         var uncompressedSize64: Int64 = numericCast(uncompressedSize)
@@ -230,10 +232,11 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         guard signature == Zip.fileHeaderSignature else { throw ZipArchiveReaderError.invalidDirectory }
 
         let filename = try storage.readString(length: numericCast(fileNameLength))
-        let extraFieldsBuffer = try storage.readBytes(length: numericCast(extraFieldsLength))
+        let extraFieldsLengthInt = Int(extraFieldsLength)
+        let extraFields = try storage.withTemporaryReadBytes(extraFieldsLengthInt) { storage in
+            try readExtraFields(storage, storageSize: extraFieldsLengthInt)
+        }
         let comment = try storage.readString(length: numericCast(commentLength))
-
-        let extraFields = try readExtraFields(extraFieldsBuffer)
 
         /// Extract ZIP64 extra field
         var uncompressedSize64: Int64 = numericCast(uncompressedSize)
@@ -291,13 +294,12 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
-    func readExtraFields(_ buffer: [UInt8]) throws -> [Zip.ExtraField] {
-        var extraFieldsBuffer = MemoryBuffer(buffer)
+    func readExtraFields(_ storage: some ZipReadableStorage, storageSize: Int) throws -> [Zip.ExtraField] {
         var extraFields: [Zip.ExtraField] = []
-        while extraFieldsBuffer.index < extraFieldsBuffer.length {
-            let (header, size) = try extraFieldsBuffer.readIntegers(UInt16.self, UInt16.self)
-            let data = try extraFieldsBuffer.read(numericCast(size))
-            extraFields.append(.init(header: .init(rawValue: header), data: data))
+        while try storage.currentPosition() < storageSize {
+            let (header, size) = try storage.readIntegers(UInt16.self, UInt16.self)
+            let data = try storage.read(numericCast(size))
+            extraFields.append(.init(header: .init(rawValue: header), data: .init(data)))
         }
         return extraFields
     }

@@ -88,7 +88,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
             // read directory before we truncate it
             try self.storage.seek(endOfCentralDirectoryRecord.offsetOfCentralDirectory)
             // Zip files support a central directory larger then 0xffff_ffff but we don't
-            self.directoryBuffer = try self.storage.readBytes(length: numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
+            self.directoryBuffer = try [UInt8](self.storage.read(numericCast(endOfCentralDirectoryRecord.centralDirectorySize)))
             let memoryStorage = ZipMemoryStorage(self.directoryBuffer!)
             self.directory = try reader.readDirectory(memoryStorage)
             // truncate zip file

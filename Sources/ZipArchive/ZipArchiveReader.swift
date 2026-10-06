@@ -62,7 +62,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
     /// Read directory from zip archive into an array
     public func readDirectory() throws -> [Zip.FileHeader] {
         try storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
-        return try storage.withTemporaryReadBytes(numericCast(endOfCentralDirectoryRecord.centralDirectorySize)) { storage in
+        return try storage.withInMemoryStorage(numericCast(endOfCentralDirectoryRecord.centralDirectorySize)) { storage in
             try readDirectory(storage)
         }
     }
@@ -99,27 +99,29 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         guard let compressor = self.compressionMethods[localFileHeader.compressionMethod] else {
             throw ZipArchiveReaderError.unsupportedCompressionMethod
         }
-        var encryptionKeys: [UInt8]?
         var fileSize = file.flags.contains(.dataDescriptor) ? file.compressedSize : localFileHeader.compressedSize
+        let fileBytes: [UInt8]
         // if encrypted read encryption header
         if localFileHeader.flags.contains(.encrypted) {
-            encryptionKeys = [UInt8](try self.storage.read(12))
-            fileSize -= 12
+            fileBytes = try storage.withInMemoryStorage(12) { storage in
+                let encryptionKeys = [UInt8](try storage.read(12))
+                fileSize -= 12
+                var encryptedFileBytes = try [UInt8](self.storage.read(numericCast(fileSize)))
+                // if we have a password and encryption keys
+                if let password {
+                    var cryptKey = CryptKey(password: password)
+                    cryptKey.updateKey(encryptionKeys)
+                    cryptKey.decryptBytes(&encryptedFileBytes)
+                    return encryptedFileBytes
+                } else {
+                    throw ZipArchiveReaderError.encryptedFilesRequirePassword
+                }
+            }
         } else {
-            encryptionKeys = nil
+            fileBytes = try [UInt8](self.storage.read(numericCast(fileSize)))
         }
 
-        // Read bytes and uncompress
-        var fileBytes = try [UInt8](self.storage.read(numericCast(fileSize)))
-
-        // if we have a password and encryption keys
-        if let password, var encryptionKeys {
-            var cryptKey = CryptKey(password: password)
-            cryptKey.decryptBytes(&encryptionKeys)
-            cryptKey.decryptBytes(&fileBytes)
-        } else if encryptionKeys != nil {
-            throw ZipArchiveReaderError.encryptedFilesRequirePassword
-        }
+        // uncompress
         let uncompressedSize = file.flags.contains(.dataDescriptor) ? file.uncompressedSize : localFileHeader.uncompressedSize
         let uncompressedBytes = try compressor.inflate(from: fileBytes, uncompressedSize: numericCast(uncompressedSize))
         // Verify CRC32
@@ -160,7 +162,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         guard signature == Zip.localFileHeaderSignature else { throw ZipArchiveReaderError.invalidFileHeader }
         let filename = try storage.readString(length: numericCast(fileNameLength))
         let extraFieldsLengthInt = Int(extraFieldsLength)
-        let extraFields = try storage.withTemporaryReadBytes(extraFieldsLengthInt) { storage in
+        let extraFields = try storage.withInMemoryStorage(extraFieldsLengthInt) { storage in
             try readExtraFields(storage, storageSize: extraFieldsLengthInt)
         }
 
@@ -233,7 +235,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
 
         let filename = try storage.readString(length: numericCast(fileNameLength))
         let extraFieldsLengthInt = Int(extraFieldsLength)
-        let extraFields = try storage.withTemporaryReadBytes(extraFieldsLengthInt) { storage in
+        let extraFields = try storage.withInMemoryStorage(extraFieldsLengthInt) { storage in
             try readExtraFields(storage, storageSize: extraFieldsLengthInt)
         }
         let comment = try storage.readString(length: numericCast(commentLength))

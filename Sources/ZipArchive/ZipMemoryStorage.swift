@@ -27,7 +27,7 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
     }
 
     @inlinable
-    public func withTemporaryReadBytes<Return, Failure>(
+    public func withInMemoryStorage<Return, Failure>(
         _ count: Int,
         operation: (ZipMemoryStorage<Bytes.SubSequence>) throws(Failure) -> Return
     ) throws(EitherError<ZipStorageError, Failure>) -> Return where Failure: Error {

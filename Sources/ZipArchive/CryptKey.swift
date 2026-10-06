@@ -40,6 +40,13 @@ struct CryptKey {
         }
     }
 
+    mutating func updateKey<Bytes: Collection>(_ bytes: Bytes) where Bytes.Element == UInt8, Bytes.Index == Int {
+        for index in bytes.startIndex..<bytes.endIndex {
+            let c = bytes[index] ^ decryptByte()
+            updateKey(c)
+        }
+    }
+
     mutating func encryptBytes<Bytes: MutableCollection>(_ bytes: inout Bytes) where Bytes.Element == UInt8, Bytes.Index == Int {
         for index in bytes.startIndex..<bytes.endIndex {
             let t = decryptByte()

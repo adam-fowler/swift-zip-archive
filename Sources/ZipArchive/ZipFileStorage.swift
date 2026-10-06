@@ -43,7 +43,7 @@ public struct ZipFileStorage: ZipReadableStorage, ZipWriteableStorage {
     ///   - count: Number of bytes to read
     ///   - operation: closure provided temporary bytes
     /// - Throws: ``EitherError`` holding either a ``ZipStorageError`` or the error returned by the operation closure
-    public func withTemporaryReadBytes<Return, Failure>(
+    public func withInMemoryStorage<Return, Failure>(
         _ count: Int,
         operation: (ZipMemoryStorage<[UInt8]>) throws(Failure) -> Return
     ) throws(EitherError<ZipStorageError, Failure>) -> Return {

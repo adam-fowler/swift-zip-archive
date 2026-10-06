@@ -28,7 +28,7 @@ public protocol ZipReadableStorage: ZipStorage {
     ///   - count: Number of bytes to read
     ///   - operation: closure provided temporary bytes
     /// - Throws: ``EitherError`` holding either a ``ZipStorageError`` or the error returned by the operation closure
-    func withTemporaryReadBytes<Return, Failure>(
+    func withInMemoryStorage<Return, Failure>(
         _ count: Int,
         operation: (TempStorage) throws(Failure) -> Return
     ) throws(EitherError<ZipStorageError, Failure>) -> Return
@@ -84,7 +84,7 @@ extension ZipReadableStorage {
         as: T.Type = T.self
     ) throws(ZipStorageError) -> T {
         do {
-            return try withTemporaryReadBytes(MemoryLayout<T>.size) { (storage) throws(ZipStorageError) in
+            return try withInMemoryStorage(MemoryLayout<T>.size) { (storage) throws(ZipStorageError) in
                 try storage.readInteger()
             }
         } catch {
@@ -102,7 +102,7 @@ extension ZipReadableStorage {
     @inlinable
     public func readString(length: Int) throws(ZipStorageError) -> String {
         do {
-            return try withTemporaryReadBytes(length) { (storage) throws(ZipStorageError) in
+            return try withInMemoryStorage(length) { (storage) throws(ZipStorageError) in
                 try storage.readString(length: length)
             }
         } catch {
@@ -127,7 +127,7 @@ extension ZipReadableStorage {
             size += memorySize(t)
         }
         do {
-            return try withTemporaryReadBytes(size) { (storage) throws(ZipStorageError) in
+            return try withInMemoryStorage(size) { (storage) throws(ZipStorageError) in
                 try storage.readIntegers(repeat each type)
             }
         } catch {

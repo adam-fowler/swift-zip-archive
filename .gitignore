@@ -8,3 +8,4 @@ DerivedData/
 /.vscode
 /.devcontainer
 .benchmarkBaselines
+Package.resolved

@@ -7,7 +7,7 @@
 //
 
 /// Storage in a memory buffer
-public final class ZipMemoryStorage<Bytes: Collection>: ZipReadableStorage
+public struct ZipMemoryStorage<Bytes: Collection>: ZipReadableStorage, ZipInMemoryReadableStorage
 where Bytes.Element == UInt8, Bytes.Index == Int {
     @usableFromInline
     var buffer: MemoryBuffer<Bytes>
@@ -18,7 +18,7 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
     }
 
     @inlinable
-    public func read(_ count: Int) throws(ZipStorageError) -> Bytes.SubSequence {
+    public mutating func read(_ count: Int) throws(ZipStorageError) -> Bytes.SubSequence {
         do {
             return try self.buffer.read(count)
         } catch {
@@ -27,9 +27,9 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
     }
 
     @inlinable
-    public func withInMemoryStorage<Return, Failure>(
+    public mutating func withInMemoryStorage<Return, Failure>(
         _ count: Int,
-        operation: (ZipMemoryStorage<Bytes.SubSequence>) throws(Failure) -> Return
+        operation: (inout ZipMemoryStorage<Bytes.SubSequence>) throws(Failure) -> Return
     ) throws(EitherError<ZipStorageError, Failure>) -> Return where Failure: Error {
         let buffer: Bytes.SubSequence
         do {
@@ -38,7 +38,8 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
             throw .first(error)
         }
         do {
-            return try operation(ZipMemoryStorage<Bytes.SubSequence>(buffer))
+            var storage = ZipMemoryStorage<Bytes.SubSequence>(buffer)
+            return try operation(&storage)
         } catch {
             throw .second(error)
         }
@@ -46,7 +47,7 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
 
     @inlinable
     @discardableResult
-    public func seek(_ baseOffset: Int64) throws(ZipStorageError) -> Int64 {
+    public mutating func seek(_ baseOffset: Int64) throws(ZipStorageError) -> Int64 {
         do {
             try self.buffer.seek(numericCast(baseOffset))
             return numericCast(self.buffer.index)
@@ -57,7 +58,7 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
 
     @inlinable
     @discardableResult
-    public func seekOffset(_ offset: Int64) throws(ZipStorageError) -> Int64 {
+    public mutating func seekOffset(_ offset: Int64) throws(ZipStorageError) -> Int64 {
         do {
             return try numericCast(self.buffer.seekOffset(numericCast(offset)))
         } catch {
@@ -67,7 +68,7 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
 
     @inlinable
     @discardableResult
-    public func seekEnd(_ offset: Int64 = 0) throws(ZipStorageError) -> Int64 {
+    public mutating func seekEnd(_ offset: Int64 = 0) throws(ZipStorageError) -> Int64 {
         do {
             return try numericCast(self.buffer.seekEnd(numericCast(offset)))
         } catch {
@@ -83,7 +84,7 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
     /// - Returns: Value read from storage
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
+    public mutating func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
         as: T.Type = T.self
     ) throws(ZipStorageError) -> T {
         let buffer = try read(MemoryLayout<T>.size)
@@ -99,7 +100,7 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
     /// - Returns: String read from storage
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public func readString(length: Int) throws(ZipStorageError) -> String {
+    public mutating func readString(length: Int) throws(ZipStorageError) -> String {
         let buffer = try read(length)
         return String(decoding: buffer, as: UTF8.self)
     }
@@ -109,7 +110,9 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
     /// - Returns: Integers read from storage
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(_ type: repeat (each T).Type) throws(ZipStorageError) -> (repeat each T) {
+    public mutating func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(
+        _ type: repeat (each T).Type
+    ) throws(ZipStorageError) -> (repeat each T) {
         func memorySize<Value>(_ value: Value.Type) -> Int {
             MemoryLayout<Value>.size
         }
@@ -129,17 +132,17 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
 
 extension ZipMemoryStorage: ZipWriteableStorage where Bytes: RangeReplaceableCollection {
     @inlinable
-    public convenience init() {
+    public init() {
         self.init(.init())
     }
 
     @inlinable
-    public func write<WriteBytes: Collection>(bytes: WriteBytes) where WriteBytes.Element == UInt8 {
+    public mutating func write<WriteBytes: Collection>(bytes: WriteBytes) where WriteBytes.Element == UInt8 {
         self.buffer.write(bytes: bytes)
     }
 
     @inlinable
-    public func truncate(_ size: Int64) throws(ZipStorageError) {
+    public mutating func truncate(_ size: Int64) throws(ZipStorageError) {
         do {
             try self.buffer.truncate(size)
         } catch {

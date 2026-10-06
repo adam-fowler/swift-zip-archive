@@ -16,60 +16,60 @@ public protocol ZipReadableStorage: ZipStorage {
     /// Buffer type returned by `read`
     associatedtype OutputBuffer: Collection where OutputBuffer.Element == UInt8, OutputBuffer.Index == Int
     /// Buffer type returned by `read`
-    associatedtype TempStorage: ZipReadableStorage
+    associatedtype TempStorage: ZipInMemoryReadableStorage
     ///  Read so many bytes from storage
     /// - Parameters
     ///   - count: Number of bytes to read
     /// - Returns: Bytes read from storage
     /// - Throws: ``ZipStorageError``
-    func read(_ count: Int) throws(ZipStorageError) -> OutputBuffer
+    mutating func read(_ count: Int) throws(ZipStorageError) -> OutputBuffer
     ///  Read so many bytes from storage and store in temporary buffer
     /// - Parameters
     ///   - count: Number of bytes to read
     ///   - operation: closure provided temporary bytes
     /// - Throws: ``EitherError`` holding either a ``ZipStorageError`` or the error returned by the operation closure
-    func withInMemoryStorage<Return, Failure>(
+    mutating func withInMemoryStorage<Return, Failure>(
         _ count: Int,
-        operation: (TempStorage) throws(Failure) -> Return
+        operation: (inout TempStorage) throws(Failure) -> Return
     ) throws(EitherError<ZipStorageError, Failure>) -> Return
     /// Read integer from buffer
     /// - Parameter as: Integer type to read
     /// - Returns: Value read from storage
     /// - Throws: ``ZipStorageError``
-    func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
+    mutating func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
         as: T.Type
     ) throws(ZipStorageError) -> T
     /// Read string of length from buffer
     /// - Parameter length: Length of string in bytes.
     /// - Returns: String read from storage
     /// - Throws: ``ZipStorageError``
-    func readString(length: Int) throws(ZipStorageError) -> String
+    mutating func readString(length: Int) throws(ZipStorageError) -> String
     /// Read a list of integers from storage
     /// - Parameter type: list of integer types to read
     /// - Returns: Integers read from storage
     /// - Throws: ``ZipStorageError``
-    func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(_ type: repeat (each T).Type) throws(ZipStorageError) -> (repeat each T)
+    mutating func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(_ type: repeat (each T).Type) throws(ZipStorageError) -> (repeat each T)
 
     /// Seek to position in storage
     /// - Parameters
     ///   - index: Absolute offset in file
     /// - Throws: ``ZipStorageError``
-    @discardableResult func seek(_ index: Int64) throws(ZipStorageError) -> Int64
+    @discardableResult mutating func seek(_ index: Int64) throws(ZipStorageError) -> Int64
     /// Seek to position relative to current position
     /// - Parameters
     ///   - offset: Relative offset in file
     /// - Returns: Absolute offset after seek
     /// - Throws: ``ZipStorageError``
-    @discardableResult func seekOffset(_ offset: Int64) throws(ZipStorageError) -> Int64
+    @discardableResult mutating func seekOffset(_ offset: Int64) throws(ZipStorageError) -> Int64
     ///  Seek to position relative to end of file
     /// - Parameter offset: Offset relative to end of file
     /// - Returns: Absolute offset after seek
     /// - Throws: ``ZipStorageError``
-    @discardableResult func seekEnd(_ offset: Int64) throws(ZipStorageError) -> Int64
+    @discardableResult mutating func seekEnd(_ offset: Int64) throws(ZipStorageError) -> Int64
 }
 
 extension ZipReadableStorage {
-    public func currentPosition() throws(ZipStorageError) -> Int64 {
+    public mutating func currentPosition() throws(ZipStorageError) -> Int64 {
         try seekOffset(0)
     }
 }
@@ -80,7 +80,7 @@ extension ZipReadableStorage {
     /// - Returns: Value read from storage
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
+    public mutating func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
         as: T.Type = T.self
     ) throws(ZipStorageError) -> T {
         do {
@@ -100,7 +100,7 @@ extension ZipReadableStorage {
     /// - Returns: String read from storage
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public func readString(length: Int) throws(ZipStorageError) -> String {
+    public mutating func readString(length: Int) throws(ZipStorageError) -> String {
         do {
             return try withInMemoryStorage(length) { (storage) throws(ZipStorageError) in
                 try storage.readString(length: length)
@@ -118,7 +118,9 @@ extension ZipReadableStorage {
     /// - Returns: Integers read from storage
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(_ type: repeat (each T).Type) throws(ZipStorageError) -> (repeat each T) {
+    public mutating func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(
+        _ type: repeat (each T).Type
+    ) throws(ZipStorageError) -> (repeat each T) {
         func memorySize<Value>(_ value: Value.Type) -> Int {
             MemoryLayout<Value>.size
         }
@@ -138,3 +140,5 @@ extension ZipReadableStorage {
         }
     }
 }
+
+public protocol ZipInMemoryReadableStorage: ZipReadableStorage {}

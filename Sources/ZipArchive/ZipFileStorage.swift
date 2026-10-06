@@ -45,7 +45,7 @@ public struct ZipFileStorage: ZipReadableStorage, ZipWriteableStorage {
     /// - Throws: ``EitherError`` holding either a ``ZipStorageError`` or the error returned by the operation closure
     public func withInMemoryStorage<Return, Failure>(
         _ count: Int,
-        operation: (ZipMemoryStorage<[UInt8]>) throws(Failure) -> Return
+        operation: (inout ZipMemoryStorage<[UInt8]>) throws(Failure) -> Return
     ) throws(EitherError<ZipStorageError, Failure>) -> Return {
         let buffer: [UInt8]
         do {
@@ -54,7 +54,8 @@ public struct ZipFileStorage: ZipReadableStorage, ZipWriteableStorage {
             throw .first(error)
         }
         do {
-            return try operation(ZipMemoryStorage(buffer))
+            var storage = ZipMemoryStorage(buffer)
+            return try operation(&storage)
         } catch {
             throw .second(error)
         }

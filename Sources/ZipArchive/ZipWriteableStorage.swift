@@ -11,12 +11,12 @@ public protocol ZipWriteableStorage: ZipStorage {
     /// Write buffer to storage
     /// - Parameter bytes: Buffer to write to storage
     /// - Throws: ``ZipStorageError``
-    func write<Bytes: Collection>(bytes: Bytes) throws(ZipStorageError) where Bytes.Element == UInt8
+    mutating func write<Bytes: Collection>(bytes: Bytes) throws(ZipStorageError) where Bytes.Element == UInt8
 
     ///  Drop storage after offset in storage and seek to that position
     /// - Parameter size: Size of truncated storage
     /// - Throws: ``ZipStorageError``
-    func truncate(_ size: Int64) throws(ZipStorageError)
+    mutating func truncate(_ size: Int64) throws(ZipStorageError)
 }
 
 extension ZipWriteableStorage {
@@ -24,7 +24,7 @@ extension ZipWriteableStorage {
     /// - Parameter string: String to write
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public func writeString(_ string: String) throws(ZipStorageError) {
+    public mutating func writeString(_ string: String) throws(ZipStorageError) {
         try self.write(bytes: string.utf8)
     }
 
@@ -32,7 +32,7 @@ extension ZipWriteableStorage {
     /// - Parameter value: Integer to write
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public func writeInteger<T: FixedWidthInteger>(
+    public mutating func writeInteger<T: FixedWidthInteger>(
         _ value: T
     ) throws(ZipStorageError) {
         do {
@@ -50,7 +50,7 @@ extension ZipWriteableStorage {
     /// - Parameter value: Integers to write
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public func writeIntegers<each T: FixedWidthInteger>(_ value: repeat each T) throws(ZipStorageError) {
+    public mutating func writeIntegers<each T: FixedWidthInteger>(_ value: repeat each T) throws(ZipStorageError) {
         try (repeat self.writeInteger(each value))
     }
 }

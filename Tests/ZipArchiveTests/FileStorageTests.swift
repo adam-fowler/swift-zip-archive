@@ -98,7 +98,7 @@ final class ZipFileStorageTests {
     }
 
     @Test func testWrite() throws {
-        let file = ZipMemoryStorage<[UInt8]>()
+        var file = ZipMemoryStorage<[UInt8]>()
         try file.seekEnd()
         file.write(bytes: [1, 2, 3])
         try file.seek(0)
@@ -106,7 +106,7 @@ final class ZipFileStorageTests {
     }
 
     @Test func testAppendingWrite() throws {
-        let file = ZipMemoryStorage<[UInt8]>([1, 2, 3])
+        var file = ZipMemoryStorage<[UInt8]>([1, 2, 3])
         try file.seekEnd()
         file.write(bytes: [4, 5, 6])
         try file.seek(0)
@@ -114,7 +114,7 @@ final class ZipFileStorageTests {
     }
 
     @Test func testReplacingWrite() throws {
-        let file = ZipMemoryStorage<[UInt8]>([1, 2, 3, 4, 5, 6])
+        var file = ZipMemoryStorage<[UInt8]>([1, 2, 3, 4, 5, 6])
         try file.seek(2)
         file.write(bytes: [7, 8, 9])
         try file.seek(0)

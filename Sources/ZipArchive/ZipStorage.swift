@@ -8,11 +8,11 @@
 
 /// Protocol for storage of a Zip archive
 public protocol ZipStorage {
-    func currentPosition() throws(ZipStorageError) -> Int64
+    mutating func currentPosition() throws(ZipStorageError) -> Int64
 }
 
 /// Error thrown by ZipStorage
-public struct ZipStorageError: Error {
+public struct ZipStorageError: Error, Equatable {
     internal enum Value {
         case fileOffsetOutOfRange
         case readPastEndOfFile

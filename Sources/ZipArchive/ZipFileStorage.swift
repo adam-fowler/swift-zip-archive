@@ -9,17 +9,20 @@
 public import SystemPackage
 
 /// Zip storage on disk
-public struct ZipFileStorage: ZipReadableStorage, ZipWriteableStorage {
+public struct ZipFileStorage: ZipReadableStorage, ZipWriteableStorage, ~Escapable {
     @usableFromInline
     let fileDescriptor: FileDescriptor
     @usableFromInline
     let length: Int64
 
+    @_lifetime(immortal)
     @inlinable
     init(_ fileDescriptor: FileDescriptor) throws {
-        self.fileDescriptor = fileDescriptor
-        self.length = try fileDescriptor.seek(offset: 0, from: .end)
+        let length = try fileDescriptor.seek(offset: 0, from: .end)
         _ = try fileDescriptor.seek(offset: 0, from: .start)
+
+        self.fileDescriptor = fileDescriptor
+        self.length = length
     }
 
     @inlinable

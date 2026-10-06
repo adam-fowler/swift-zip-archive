@@ -495,19 +495,7 @@ extension ZipArchiveWriter {
 extension ZipArchiveWriter: Escapable where Storage: Escapable & ~Copyable {}
 extension ZipArchiveWriter: Copyable where Storage: Copyable & ~Escapable {}
 
-extension ZipArchiveWriter {
-    /// Options when writing zip archive to file
-    public struct FileOptions: OptionSet {
-        public let rawValue: Int
-
-        public init(rawValue: Int) {
-            self.rawValue = rawValue
-        }
-
-        /// Create new zip archive
-        public static var create: Self { .init(rawValue: (1 << 0)) }
-    }
-
+extension ZipArchiveWriter where Storage: ~Copyable & ~Escapable {
     /// Use ZipArchiveWriter to write to a file
     ///
     /// Opens or creates new file depending on `.create` option. If opening file then read
@@ -521,10 +509,10 @@ extension ZipArchiveWriter {
     ///   - process: Function to call with opened zip archive
     public static func withFile(
         _ filename: String,
-        options: FileOptions = [],
+        options: ZipFileOptions = [],
         configuration: ZipArchiveWriterConfiguration = .init(),
         process: (
-            inout ZipArchiveWriter
+            inout ZipArchiveWriter<ZipFileStorage>
         ) throws -> Void
     ) throws where Storage == ZipFileStorage {
         let fileDescriptor = try FileDescriptor.open(
@@ -543,6 +531,18 @@ extension ZipArchiveWriter {
             try writer.writeDirectory()
         }
     }
+}
+
+/// Options when writing zip archive to file
+public struct ZipFileOptions: OptionSet {
+    public let rawValue: Int
+
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+
+    /// Create new zip archive
+    public static var create: Self { .init(rawValue: (1 << 0)) }
 }
 
 /// Errors thrown when writing zip archives

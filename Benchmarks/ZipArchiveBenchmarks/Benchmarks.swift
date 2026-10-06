@@ -48,7 +48,7 @@ let benchmarks: @Sendable () -> Void = {
 
     Benchmark("ZipArchiveReader.readDirectory") { benchmark in
         let file = try buildZipFile(numFile: 32, fileSizeRange: 100..<4000)
-        let reader = try ZipArchiveReader(buffer: file)
+        var reader = try ZipArchiveReader(buffer: file)
         benchmark.startMeasurement()
         for _ in benchmark.scaledIterations {
             try blackHole(reader.readDirectory())
@@ -58,7 +58,7 @@ let benchmarks: @Sendable () -> Void = {
 
     Benchmark("ZipArchiveReader.readFile") { benchmark in
         let file = try buildZipFile(numFile: 1, fileSizeRange: 100..<101)
-        let reader = try ZipArchiveReader(buffer: file)
+        var reader = try ZipArchiveReader(buffer: file)
         let directory = try reader.readDirectory()
         benchmark.startMeasurement()
         for _ in benchmark.scaledIterations {

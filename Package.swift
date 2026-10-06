@@ -39,7 +39,8 @@ let package = Package(
         .testTarget(
             name: "ZipArchiveTests",
             dependencies: ["ZipArchive"],
-            resources: [.process("resources")]
+            resources: [.process("resources")],
+            swiftSettings: defaultSwiftSettings
         ),
     ]
 )

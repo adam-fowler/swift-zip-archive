@@ -71,7 +71,7 @@ struct ZipArchiveReaderTests {
         let filePath = Bundle.module.fixedUpPath(forResource: "source", ofType: "zip")!
         try ZipArchiveReader.withFile(filePath) { zipArchiveReader in
             var fileHeader: Zip.FileHeader?
-            try zipArchiveReader.parseDirectory { file in
+            try zipArchiveReader.parseDirectory { reader, file in
                 if file.filename == "Tests/ZipTests/ZipFileReaderTests.swift" {
                     fileHeader = file
                 }

@@ -69,7 +69,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     func buildZipFile(numFile: Int, fileSizeRange: Range<Int>) throws -> ArraySlice<UInt8> {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         let step = Double(fileSizeRange.upperBound - fileSizeRange.lowerBound) / Double(numFile)
         var size = Double(fileSizeRange.lowerBound)
         for index in 0..<numFile {

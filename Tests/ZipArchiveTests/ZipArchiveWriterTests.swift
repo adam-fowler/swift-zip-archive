@@ -20,14 +20,14 @@ struct ZipArchiveWriterTests {
     }
     @Test
     func testCreateEmptyZipArchive() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         let buffer = try writer.finalizeBuffer()
         #expect(buffer == [UInt8]([80, 75, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])[...])
     }
 
     @Test
     func testAddingFileToEmptyZipArchive() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8))
         let buffer = try writer.finalizeBuffer()
         var zipArchiveReader = try ZipArchiveReader(buffer: buffer)
@@ -42,10 +42,10 @@ struct ZipArchiveWriterTests {
     @Test
     func testAddingFileToNonEmptyZipArchive() throws {
         // write original zip archive
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8))
         let buffer = try writer.finalizeBuffer()
-        let writer2 = try ZipArchiveWriter(bytes: buffer)
+        var writer2 = try ZipArchiveWriter(bytes: buffer)
         try writer2.writeFile(filename: "Goodbye.txt", contents: .init("Goodbye, world!".utf8))
         let buffer2 = try writer2.finalizeBuffer()
 
@@ -64,10 +64,10 @@ struct ZipArchiveWriterTests {
 
     @Test
     func testAddingFilesWithDirectory() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         try writer.writeFile(filename: "Tests/Hello.txt", contents: .init("Hello, world!".utf8))
         let buffer = try writer.finalizeBuffer()
-        let writer2 = try ZipArchiveWriter(bytes: buffer)
+        var writer2 = try ZipArchiveWriter(bytes: buffer)
 
         #expect(writer2.directory.count == 2)
         let firstFilename = try #require(writer2.directory.first?.filename)
@@ -83,10 +83,10 @@ struct ZipArchiveWriterTests {
 
     @Test
     func testAddingDuplicateFilesErrors() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         try writer.writeFile(filename: "Tests/Hello.txt", contents: .init("Hello, world!".utf8))
         let buffer = try writer.finalizeBuffer()
-        let writer2 = try ZipArchiveWriter(bytes: buffer)
+        var writer2 = try ZipArchiveWriter(bytes: buffer)
 
         #expect(throws: ZipArchiveWriterError.fileAlreadyExists) {
             try writer2.writeFile(filename: "Tests", contents: .init("Hello, world!".utf8))
@@ -105,10 +105,10 @@ struct ZipArchiveWriterTests {
 
     @Test
     func testAddingDuplicateFolderErrors() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8))
         let buffer = try writer.finalizeBuffer()
-        let writer2 = try ZipArchiveWriter(bytes: buffer)
+        var writer2 = try ZipArchiveWriter(bytes: buffer)
 
         #expect(throws: ZipArchiveWriterError.fileAlreadyExists) {
             try writer2.writeFile(filename: "Hello.txt/Hello.txt", contents: .init("Hello, world!".utf8))
@@ -121,7 +121,7 @@ struct ZipArchiveWriterTests {
 
     @Test
     func testAddingEncryptedFileToZipArchive() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8), password: "testAddingEncryptedFileToZipArchive")
         let buffer = try writer.finalizeBuffer()
         var zipArchiveReader = try ZipArchiveReader(buffer: buffer)
@@ -180,7 +180,7 @@ struct ZipArchiveWriterTests {
 
     @Test
     func testWritingFolderContents() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         // write contents of sources folder into zip
         try writer.writeFolderContents(rootFolder.appending("Sources"), options: [.recursive, .includeContainingFolder])
         try writer.writeFolderContents(rootFolder.appending("Tests"), options: .recursive)
@@ -194,7 +194,7 @@ struct ZipArchiveWriterTests {
 
     @Test
     func testWritingFolderContentsFilter() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         // write contents of sources folder into zip
         try writer.writeFolderContents(rootFolder, options: [.recursive, .includeHiddenFiles]) { filePath, isDirectory in
             filePath.lastComponent != ".build" && filePath.lastComponent != ".git"
@@ -209,7 +209,7 @@ struct ZipArchiveWriterTests {
 
     @Test
     func testNoCompression() throws {
-        let writer = ZipArchiveWriter(configuration: .init(compression: .noCompression))
+        var writer = ZipArchiveWriter(configuration: .init(compression: .noCompression))
         try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8))
         let buffer = try writer.finalizeBuffer()
         var zipArchiveReader = try ZipArchiveReader(buffer: buffer)
@@ -245,7 +245,7 @@ struct ZipArchiveWriterTests {
             }
 
         }
-        let writer = ZipArchiveWriter(configuration: .init(compression: XorCompressor()))
+        var writer = ZipArchiveWriter(configuration: .init(compression: XorCompressor()))
         try writer.writeFile(filename: "Hello.txt", contents: .init("Hello, world!".utf8))
         let buffer = try writer.finalizeBuffer()
         var zipArchiveReader = try ZipArchiveReader(buffer: buffer, configuration: .init(compressionMethods: [XorCompressor()]))

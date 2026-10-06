@@ -93,7 +93,7 @@ struct ZipArchiveReaderTests {
 
     @Test
     func loadEmptyZipArchive() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         let buffer = try writer.finalizeBuffer()
         var reader = try ZipArchiveReader(buffer: buffer)
         let directory = try reader.readDirectory()
@@ -164,7 +164,7 @@ struct ZipArchiveReaderTests {
 
     @Test
     func extractToFolder() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         try writer.writeFile(filename: "Hello/Hello.txt", contents: .init("Hello,".utf8))
         try writer.writeFile(filename: "World/World.txt", contents: .init("world!".utf8))
         let buffer = try writer.finalizeBuffer()
@@ -189,7 +189,7 @@ struct ZipArchiveReaderTests {
 
     @Test
     func dontExtractOutsideRootFolder() throws {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         try writer.writeFile(filename: "Hello/Hello.txt", contents: .init("Hello,".utf8))
         try writer.writeFile(filename: "../World.txt", contents: .init("world!".utf8))
         try writer.writeFile(filename: "test/../../World.txt", contents: .init("world!".utf8))

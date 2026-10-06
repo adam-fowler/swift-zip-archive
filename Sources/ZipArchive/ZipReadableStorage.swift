@@ -71,6 +71,16 @@ extension ZipReadableStorage where Self: ~Copyable & ~Escapable {
         return .init(buffer)
     }
 
+    /// Read buffer and copy into array of `UInt8`
+    /// - Parameter length: Length of buffer to read
+    /// - Returns: Array read from storage
+    /// - Throws: ``ZipStorageError``
+    @inlinable
+    public mutating func readBytes(length: Int) throws(ZipStorageError) -> [UInt8] where OutputBuffer == [UInt8] {
+        let buffer = try read(length)
+        return buffer
+    }
+
     /// Read a list of integers from storage
     /// - Parameter type: list of integer types to read
     /// - Returns: Integers read from storage

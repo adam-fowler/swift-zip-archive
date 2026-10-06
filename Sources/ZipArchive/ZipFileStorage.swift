@@ -23,6 +23,11 @@ public struct ZipFileStorage: ZipReadableStorage, ZipWriteableStorage {
     }
 
     @inlinable
+    public func currentPosition() throws(ZipStorageError) -> Int64 {
+        try self.seekOffset(0)
+    }
+
+    @inlinable
     public func read(_ count: Int) throws(ZipStorageError) -> [UInt8] {
         guard count >= 0 else { throw .fileOffsetOutOfRange }
         guard count > 0 else { return [] }

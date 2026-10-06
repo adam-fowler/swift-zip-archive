@@ -13,6 +13,8 @@ var defaultSwiftSettings: [SwiftSetting] = [
 
     // https://github.com/swiftlang/swift-evolution/blob/main/proposals/0444-member-import-visibility.md
     .enableUpcomingFeature("MemberImportVisibility"),
+
+    .enableExperimentalFeature("Lifetimes"),
 ]
 
 let package = Package(

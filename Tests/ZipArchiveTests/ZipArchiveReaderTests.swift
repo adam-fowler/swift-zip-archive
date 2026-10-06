@@ -27,7 +27,7 @@ struct ZipArchiveReaderTests {
         let filePath = Bundle.module.fixedUpPath(forResource: "source", ofType: "zip")!
         let fileHandle = FileHandle(forReadingAtPath: filePath)
         let data = try #require(try fileHandle?.readToEnd())
-        let zipArchiveReader = try ZipArchiveReader(buffer: data)
+        var zipArchiveReader = try ZipArchiveReader(buffer: data)
         let zipArchiveDirectory = try zipArchiveReader.readDirectory()
         #expect(zipArchiveDirectory.count == 9)
         #expect(zipArchiveDirectory[0].filename == "Sources/Zip/")
@@ -39,7 +39,7 @@ struct ZipArchiveReaderTests {
         let filePath = Bundle.module.fixedUpPath(forResource: "source", ofType: "zip")!
         let fileHandle = FileHandle(forReadingAtPath: filePath)
         let data = try #require(try fileHandle?.readToEnd())
-        let ZipArchiveReader = try ZipArchiveReader(buffer: data)
+        var ZipArchiveReader = try ZipArchiveReader(buffer: data)
         let zipArchiveDirectory = try ZipArchiveReader.readDirectory()
         _ = try ZipArchiveReader.readFile(zipArchiveDirectory[2])
     }
@@ -50,7 +50,7 @@ struct ZipArchiveReaderTests {
         let fileHandle = FileHandle(forReadingAtPath: filePath)
         let data = try #require(try fileHandle?.readToEnd())
         let data2 = Data(repeating: 0, count: 256) + data
-        let ZipArchiveReader = try ZipArchiveReader(buffer: data2[256...])
+        var ZipArchiveReader = try ZipArchiveReader(buffer: data2[256...])
         let zipArchiveDirectory = try ZipArchiveReader.readDirectory()
         _ = try ZipArchiveReader.readFile(zipArchiveDirectory[2])
     }
@@ -95,7 +95,7 @@ struct ZipArchiveReaderTests {
     func loadEmptyZipArchive() throws {
         let writer = ZipArchiveWriter()
         let buffer = try writer.finalizeBuffer()
-        let reader = try ZipArchiveReader(buffer: buffer)
+        var reader = try ZipArchiveReader(buffer: buffer)
         let directory = try reader.readDirectory()
         #expect(directory.count == 0)
     }
@@ -168,7 +168,7 @@ struct ZipArchiveReaderTests {
         try writer.writeFile(filename: "Hello/Hello.txt", contents: .init("Hello,".utf8))
         try writer.writeFile(filename: "World/World.txt", contents: .init("world!".utf8))
         let buffer = try writer.finalizeBuffer()
-        let reader = try ZipArchiveReader(buffer: buffer)
+        var reader = try ZipArchiveReader(buffer: buffer)
         try DirectoryDescriptor.mkdir("Temp-extractToFolder", options: .ignoreExistingDirectoryError, permissions: [.ownerReadWriteExecute])
         defer {
             try? DirectoryDescriptor.recursiveDelete("Temp-extractToFolder")
@@ -194,7 +194,7 @@ struct ZipArchiveReaderTests {
         try writer.writeFile(filename: "../World.txt", contents: .init("world!".utf8))
         try writer.writeFile(filename: "test/../../World.txt", contents: .init("world!".utf8))
         let buffer = try writer.finalizeBuffer()
-        let reader = try ZipArchiveReader(buffer: buffer)
+        var reader = try ZipArchiveReader(buffer: buffer)
         try DirectoryDescriptor.mkdir(
             "Temp-dontExtractOutsideRootFolder",
             options: .ignoreExistingDirectoryError,

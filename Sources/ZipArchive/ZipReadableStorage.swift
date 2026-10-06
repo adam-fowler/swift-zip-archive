@@ -7,7 +7,7 @@
 //
 
 /// Protocol for storage that can be read from
-public protocol ZipReadableStorage: ZipStorage {
+public protocol ZipReadableStorage: ZipStorage, ~Copyable, ~Escapable {
     /// Buffer type returned by `read`
     associatedtype OutputBuffer: Collection where OutputBuffer.Element == UInt8, OutputBuffer.Index == Int
     ///  Read so many bytes from storage
@@ -34,7 +34,7 @@ public protocol ZipReadableStorage: ZipStorage {
     @discardableResult mutating func seekEnd(_ offset: Int64) throws(ZipStorageError) -> Int64
 }
 
-extension ZipReadableStorage {
+extension ZipReadableStorage where Self: ~Copyable & ~Escapable {
     /// Read integer from buffer
     /// - Parameter as: Integer type to read
     /// - Returns: Value read from storage

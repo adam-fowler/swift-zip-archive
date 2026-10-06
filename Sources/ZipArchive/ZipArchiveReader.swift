@@ -28,14 +28,15 @@ public struct ZipArchiveReaderConfiguration {
 
 /// Zip archive reader type
 public final class ZipArchiveReader<Storage: ZipReadableStorage> {
-    let storage: Storage
+    var storage: Storage
     let endOfCentralDirectoryRecord: Zip.EndOfCentralDirectory
     let compressionMethods: ZipCompressionMethodsMap
     var parsingDirectory: Bool
 
     init(_ file: Storage, configuration: ZipArchiveReaderConfiguration) throws {
+        var file = file
         self.storage = file
-        self.endOfCentralDirectoryRecord = try Self.readEndOfCentralDirectory(file: file)
+        self.endOfCentralDirectoryRecord = try Self.readEndOfCentralDirectory(file: &file)
 
         let compressionKeyValuePairs = configuration.compressionMethods.map { (key: $0.method, value: $0) }
         self.compressionMethods = [
@@ -63,8 +64,8 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
     public func readDirectory() throws -> [Zip.FileHeader] {
         try storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
         let bytes = try storage.read(numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
-        let memoryStorage = ZipMemoryStorage(bytes)
-        return try readDirectory(memoryStorage)
+        var memoryStorage = ZipMemoryStorage(bytes)
+        return try readDirectory(&memoryStorage)
     }
 
     /// Parse directory from zip file and run process on each entry
@@ -80,7 +81,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         }
         try storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
         for _ in 0..<endOfCentralDirectoryRecord.diskEntries {
-            let fileHeader = try self.readFileHeader(from: storage)
+            let fileHeader = try self.readFileHeader(from: &storage)
             try process(fileHeader)
         }
     }
@@ -131,10 +132,10 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
     }
 
     /// Read directory from byffer
-    func readDirectory(_ storage: some ZipReadableStorage) throws -> [Zip.FileHeader] {
+    func readDirectory(_ storage: inout some ZipReadableStorage) throws -> [Zip.FileHeader] {
         var directory: [Zip.FileHeader] = []
         for _ in 0..<endOfCentralDirectoryRecord.diskEntries {
-            let fileHeader = try self.readFileHeader(from: storage)
+            let fileHeader = try self.readFileHeader(from: &storage)
             directory.append(fileHeader)
         }
         return directory
@@ -203,7 +204,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
-    func readFileHeader(from storage: some ZipReadableStorage) throws -> Zip.FileHeader {
+    func readFileHeader(from storage: inout some ZipReadableStorage) throws -> Zip.FileHeader {
         let (
             signature, versionMadeBy, versionNeeded, flags, compression, modTime, modDate, crc32, compressedSize, uncompressedSize, fileNameLength,
             extraFieldsLength, commentLength, diskStart, internalAttribute, externalAttribute, offsetOfLocalHeader
@@ -302,14 +303,14 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         return extraFields
     }
 
-    static func readEndOfCentralDirectory(file: some ZipReadableStorage) throws -> Zip.EndOfCentralDirectory {
-        _ = try searchForEndOfCentralDirectory(file: file)
+    static func readEndOfCentralDirectory(file: inout some ZipReadableStorage) throws -> Zip.EndOfCentralDirectory {
+        _ = try searchForEndOfCentralDirectory(file: &file)
 
         let zip64EndOfCentralLocator: Zip.Zip64EndOfCentralLocator?
         // verify we have space to read the zip64 end of central directory locator, before reading it
         if try file.seekOffset(0) > 20 {
             try file.seekOffset(-20)
-            zip64EndOfCentralLocator = try Self.readZip64EndOfCentralLocator(file: file)
+            zip64EndOfCentralLocator = try Self.readZip64EndOfCentralLocator(file: &file)
         } else {
             zip64EndOfCentralLocator = nil
         }
@@ -346,7 +347,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
             // jump to zip64 central directory
             //let offset = zip64EndOfCentralLocator.relativeOffsetEndOfCentralDirectory
             try file.seek(numericCast(zip64EndOfCentralLocator.relativeOffsetEndOfCentralDirectory))
-            let zip64EndOfCentralDirectory = try Self.readZip64EndOfCentralDirectory(file: file)
+            let zip64EndOfCentralDirectory = try Self.readZip64EndOfCentralDirectory(file: &file)
             if diskNumber == 0xffff {
                 diskNumber32 = zip64EndOfCentralDirectory.diskNumber
             }
@@ -375,7 +376,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
-    static func readZip64EndOfCentralLocator(file: some ZipReadableStorage) throws -> Zip.Zip64EndOfCentralLocator? {
+    static func readZip64EndOfCentralLocator(file: inout some ZipReadableStorage) throws -> Zip.Zip64EndOfCentralLocator? {
         let (signature, diskNumberCentralDirectoryStarts, relativeOffsetEndOfCentralDirectory, totalNumberOfDisks) = try file.readIntegers(
             UInt32.self,
             UInt32.self,
@@ -390,7 +391,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
-    static func readZip64EndOfCentralDirectory(file: some ZipReadableStorage) throws -> Zip.Zip64EndOfCentralDirectory {
+    static func readZip64EndOfCentralDirectory(file: inout some ZipReadableStorage) throws -> Zip.Zip64EndOfCentralDirectory {
         let (
             signature, _, versionNeeded, diskNumber, diskNumberCentralDirectoryStarts, diskEntries, totalEntries, centralDirectorySize,
             offsetOfCentralDirectory
@@ -418,7 +419,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
-    static func searchForEndOfCentralDirectory(file: some ZipReadableStorage) throws -> Int {
+    static func searchForEndOfCentralDirectory(file: inout some ZipReadableStorage) throws -> Int {
         let fileChunkLength: Int64 = 1024
         let fileSize = try file.seekEnd(0)
 

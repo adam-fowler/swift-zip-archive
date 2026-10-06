@@ -89,8 +89,8 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
             try self.storage.seek(endOfCentralDirectoryRecord.offsetOfCentralDirectory)
             // Zip files support a central directory larger then 0xffff_ffff but we don't
             self.directoryBuffer = try self.storage.readBytes(length: numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
-            let memoryStorage = ZipMemoryStorage(self.directoryBuffer!)
-            self.directory = try reader.readDirectory(memoryStorage)
+            var memoryStorage = ZipMemoryStorage(self.directoryBuffer!)
+            self.directory = try reader.readDirectory(&memoryStorage)
             // truncate zip file
             try self.storage.truncate(endOfCentralDirectoryRecord.offsetOfCentralDirectory)
         } else {
@@ -114,7 +114,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     ///
     /// Writes directory and end of directory sections
     /// - Returns: Buffer containing finalized zip archive
-    public func finalizeBuffer() throws -> Storage.OutputBuffer where Storage: ZipMemoryStorage<[UInt8]> {
+    public func finalizeBuffer() throws -> Storage.OutputBuffer where Storage == ZipMemoryStorage<[UInt8]> {
         try writeDirectory()
         return self.storage.buffer.buffer
     }
@@ -123,7 +123,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     ///
     /// Writes directory and end of directory sections
     /// - Returns: Buffer containing finalized zip archive
-    public func finalizeBuffer() throws -> Storage.OutputBuffer where Storage: ZipMemoryStorage<ArraySlice<UInt8>> {
+    public func finalizeBuffer() throws -> Storage.OutputBuffer where Storage == ZipMemoryStorage<ArraySlice<UInt8>> {
         try writeDirectory()
         return self.storage.buffer.buffer
     }

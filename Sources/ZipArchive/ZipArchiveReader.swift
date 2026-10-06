@@ -425,6 +425,7 @@ public final class ZipArchiveReader<Storage: ZipReadableStorage> {
         )
     }
 
+    @inlinable
     static func searchForEndOfCentralDirectory(file: inout some ZipReadableStorage) throws -> Int {
         let fileChunkLength: Int64 = 1024
         let fileSize = try file.seekEnd(0)

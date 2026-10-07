@@ -9,9 +9,9 @@
 import SystemPackage
 
 #if canImport(FoundationEssentials)
-import FoundationEssentials
+public import FoundationEssentials
 #else
-import Foundation
+public import Foundation
 #endif
 
 /// ZipArchiveReader configuration
@@ -34,7 +34,7 @@ public struct ZipArchiveReader<Storage: ZipReadableStorage & ~Copyable & ~Escapa
     var parsingDirectory: Bool
 
     @_lifetime(copy file)
-    init(_ file: consuming Storage, configuration: ZipArchiveReaderConfiguration) throws {
+    init(_ file: consuming Storage, configuration: ZipArchiveReaderConfiguration = .init()) throws {
         self.storage = file
         self.endOfCentralDirectoryRecord = try self.storage.readEndOfCentralDirectory()
 
@@ -53,6 +53,16 @@ public struct ZipArchiveReader<Storage: ZipReadableStorage & ~Copyable & ~Escapa
         let bytes = try storage.read(numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
         var memoryStorage = ZipMemoryStorage(bytes)
         return try memoryStorage.readDirectory(numEntries: self.endOfCentralDirectoryRecord.diskEntries)
+    }
+
+    /// Read directory from zip archive into an array
+    public mutating func readDirectory() throws -> [Zip.FileHeader] where Storage.OutputBuffer: ContiguousBytes {
+        try self.storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
+        let bytes = try storage.read(numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
+        return try bytes.withBytes { bytes in
+            var spanStorage = ZipSpanStorage(bytes)
+            return try spanStorage.readDirectory(numEntries: self.endOfCentralDirectoryRecord.diskEntries)
+        }
     }
 
     /// Parse directory from zip file and run process on each entry

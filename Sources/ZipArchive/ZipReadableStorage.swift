@@ -16,6 +16,12 @@ public protocol ZipReadableStorage: ZipStorage, ~Copyable, ~Escapable {
     /// - Returns: Bytes read from storage
     /// - Throws: ``ZipStorageError``
     mutating func read(_ count: Int) throws(ZipStorageError) -> OutputBuffer
+    ///  Read so many bytes from storage and return as Array
+    /// - Parameters
+    ///   - count: Number of bytes to read
+    /// - Returns: Bytes read from storage
+    /// - Throws: ``ZipStorageError``
+    mutating func readBytes(length: Int) throws(ZipStorageError) -> [UInt8]
     /// Seek to position in storage
     /// - Parameters
     ///   - index: Absolute offset in file
@@ -71,22 +77,14 @@ extension ZipReadableStorage where Self: ~Copyable & ~Escapable {
         return .init(buffer)
     }
 
-    /// Read buffer and copy into array of `UInt8`
-    /// - Parameter length: Length of buffer to read
-    /// - Returns: Array read from storage
-    /// - Throws: ``ZipStorageError``
-    @inlinable
-    public mutating func readBytes(length: Int) throws(ZipStorageError) -> [UInt8] where OutputBuffer == [UInt8] {
-        let buffer = try read(length)
-        return buffer
-    }
-
     /// Read a list of integers from storage
     /// - Parameter type: list of integer types to read
     /// - Returns: Integers read from storage
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public mutating func readIntegers<each T: FixedWidthInteger>(_ type: repeat (each T).Type) throws(ZipStorageError) -> (repeat each T) {
+    public mutating func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(
+        _ type: repeat (each T).Type
+    ) throws(ZipStorageError) -> (repeat each T) {
         func memorySize<Value>(_ value: Value.Type) -> Int {
             MemoryLayout<Value>.size
         }

@@ -236,4 +236,18 @@ struct ZipArchiveReaderTests {
         #expect(fileLength != newFileLength)
     }
     #endif
+
+    @available(macOS 26, *)
+    @Test
+    func loadZipDirectoryFromSpan() throws {
+        let filePath = Bundle.module.fixedUpPath(forResource: "source", ofType: "zip")!
+        let fileHandle = FileHandle(forReadingAtPath: filePath)
+        let data = try #require(try fileHandle?.readToEnd())
+        let storage = ZipSpanStorage(data.bytes)
+        var zipArchiveReader = try ZipArchiveReader(storage, configuration: .init())
+        let zipArchiveDirectory = try zipArchiveReader.readDirectory()
+        #expect(zipArchiveDirectory.count == 9)
+        #expect(zipArchiveDirectory[0].filename == "Sources/Zip/")
+        #expect(zipArchiveDirectory[8].filename == "Tests/ZipTests/ZipFileReaderTests.swift")
+    }
 }

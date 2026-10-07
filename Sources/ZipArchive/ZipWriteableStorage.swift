@@ -7,7 +7,7 @@
 //
 
 /// Protocol for storage that can be written to
-public protocol ZipWriteableStorage: ZipStorage {
+public protocol ZipWriteableStorage: ZipStorage, ~Copyable, ~Escapable {
     /// Write buffer to storage
     /// - Parameter bytes: Buffer to write to storage
     /// - Throws: ``ZipStorageError``
@@ -19,7 +19,7 @@ public protocol ZipWriteableStorage: ZipStorage {
     mutating func truncate(_ size: Int64) throws(ZipStorageError)
 }
 
-extension ZipWriteableStorage {
+extension ZipWriteableStorage where Self: ~Copyable & ~Escapable {
     /// Write string to storage
     /// - Parameter string: String to write
     /// - Throws: ``ZipStorageError``

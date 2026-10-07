@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.3
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import Foundation
@@ -13,6 +13,8 @@ var defaultSwiftSettings: [SwiftSetting] = [
 
     // https://github.com/swiftlang/swift-evolution/blob/main/proposals/0444-member-import-visibility.md
     .enableUpcomingFeature("MemberImportVisibility"),
+
+    .enableExperimentalFeature("Lifetimes"),
 ]
 
 let package = Package(
@@ -37,7 +39,8 @@ let package = Package(
         .testTarget(
             name: "ZipArchiveTests",
             dependencies: ["ZipArchive"],
-            resources: [.process("resources")]
+            resources: [.process("resources")],
+            swiftSettings: defaultSwiftSettings
         ),
     ]
 )

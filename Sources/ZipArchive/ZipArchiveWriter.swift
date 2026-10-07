@@ -27,73 +27,31 @@ public struct ZipArchiveWriterConfiguration {
 }
 
 /// Zip archive writer type
-public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
+public struct ZipArchiveWriter<Storage: ZipWriteableStorage & ~Copyable & ~Escapable>: ~Copyable, ~Escapable {
     var storage: Storage
     var endOfCentralDirectoryRecord: Zip.EndOfCentralDirectory
     let directory: [Zip.FileHeader]
-    let directoryBuffer: [UInt8]?
+    let directoryBuffer: [UInt8]
     let configuration: ZipArchiveWriterConfiguration
     var newDirectoryEntries: [Zip.FileHeader]
 
-    /// Initialize ZipArchiveWriter
-    /// - Parameter configuration: ZipArchiveWriter configuration
-    public init(configuration: ZipArchiveWriterConfiguration = .init()) where Storage == ZipMemoryStorage<[UInt8]> {
-        self.configuration = configuration
-        self.newDirectoryEntries = []
-        self.storage = .init()
-        self.endOfCentralDirectoryRecord = .init(
-            diskNumber: 0,
-            diskNumberCentralDirectoryStarts: 0,
-            diskEntries: 0,
-            totalEntries: 0,
-            centralDirectorySize: 0,
-            offsetOfCentralDirectory: 0,
-            comment: ""
-        )
-        self.directory = []
-        self.directoryBuffer = nil
-    }
-
-    ///  Initialize archive writer with zip archive
-    ///
-    /// - Parameters:
-    ///   - buffer: Buffer containing zip archive
-    ///   - configuration: ZipArchiveWriter configuration
-    convenience public init(
-        buffer: [UInt8],
-        configuration: ZipArchiveWriterConfiguration = .init()
-    ) throws where Storage == ZipMemoryStorage<[UInt8]> {
-        try self.init(.init(buffer), appending: true, configuration: configuration)
-    }
-
-    ///  Initialize archive writer with zip archive
-    ///
-    /// - Parameters:
-    ///   - buffer: Buffer containing zip archive
-    ///   - configuration: ZipArchiveWriter configuration
-    convenience public init(
-        bytes: ArraySlice<UInt8>,
-        configuration: ZipArchiveWriterConfiguration = .init()
-    ) throws where Storage == ZipMemoryStorage<ArraySlice<UInt8>> {
-        try self.init(.init(bytes), appending: true, configuration: configuration)
-    }
-
-    init(_ storage: Storage, appending: Bool, configuration: ZipArchiveWriterConfiguration) throws where Storage: ZipReadableStorage {
-        self.configuration = configuration
-        self.newDirectoryEntries = []
-        self.storage = storage
+    @_lifetime(copy storage)
+    init(_ storage: consuming Storage, appending: Bool, configuration: ZipArchiveWriterConfiguration) throws where Storage: ZipReadableStorage {
         if appending {
-            let reader = try ZipArchiveReader(storage, configuration: .init())
-            self.endOfCentralDirectoryRecord = reader.endOfCentralDirectoryRecord
-            // read directory before we truncate it
-            try self.storage.seek(endOfCentralDirectoryRecord.offsetOfCentralDirectory)
-            // Zip files support a central directory larger then 0xffff_ffff but we don't
-            self.directoryBuffer = try self.storage.readBytes(length: numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
-            var memoryStorage = ZipMemoryStorage(self.directoryBuffer!)
-            self.directory = try reader.readDirectory(&memoryStorage)
+            let endOfCentralDirectoryRecord = try storage.readEndOfCentralDirectory()
+            try storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
+            let directoryBuffer = try storage.readBytes(length: numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
+            var memoryStorage = ZipMemoryStorage(directoryBuffer)
+            let directory = try memoryStorage.readDirectory(numEntries: endOfCentralDirectoryRecord.diskEntries)
             // truncate zip file
-            try self.storage.truncate(endOfCentralDirectoryRecord.offsetOfCentralDirectory)
+            try storage.truncate(endOfCentralDirectoryRecord.offsetOfCentralDirectory)
+
+            self.endOfCentralDirectoryRecord = endOfCentralDirectoryRecord
+            self.directoryBuffer = directoryBuffer
+            self.directory = directory
         } else {
+            // truncate zip file
+            try storage.truncate(0)
             self.endOfCentralDirectoryRecord = .init(
                 diskNumber: 0,
                 diskNumberCentralDirectoryStarts: 0,
@@ -103,18 +61,19 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
                 offsetOfCentralDirectory: 0,
                 comment: ""
             )
-            self.directoryBuffer = nil
+            self.directoryBuffer = []
             self.directory = []
-            // truncate zip file
-            try self.storage.truncate(0)
         }
+        self.configuration = configuration
+        self.newDirectoryEntries = []
+        self.storage = storage
     }
 
     /// Finish writing zip archive to buffer and return buffer
     ///
     /// Writes directory and end of directory sections
     /// - Returns: Buffer containing finalized zip archive
-    public func finalizeBuffer() throws -> Storage.OutputBuffer where Storage == ZipMemoryStorage<[UInt8]> {
+    public mutating func finalizeBuffer() throws -> Storage.OutputBuffer where Storage == ZipMemoryStorage<[UInt8]> {
         try writeDirectory()
         return self.storage.buffer.buffer
     }
@@ -123,7 +82,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     ///
     /// Writes directory and end of directory sections
     /// - Returns: Buffer containing finalized zip archive
-    public func finalizeBuffer() throws -> Storage.OutputBuffer where Storage == ZipMemoryStorage<ArraySlice<UInt8>> {
+    public mutating func finalizeBuffer() throws -> Storage.OutputBuffer where Storage == ZipMemoryStorage<ArraySlice<UInt8>> {
         try writeDirectory()
         return self.storage.buffer.buffer
     }
@@ -136,7 +95,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     ///   - filename: Filename of file
     ///   - contents: Contents of file
     ///   - password: Password to encrypt file with
-    public func writeFile(filename: String, sourceFile: String, password: String? = nil) throws {
+    public mutating func writeFile(filename: String, sourceFile: String, password: String? = nil) throws {
         try writeFile(filePath: .init(filename), sourceFilePath: .init(sourceFile), password: password)
     }
 
@@ -148,7 +107,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     ///   - filePath: File path of file
     ///   - contents: Contents of file
     ///   - password: Password to encrypt file with
-    public func writeFile(filePath: FilePath, sourceFilePath: FilePath, password: String? = nil) throws {
+    public mutating func writeFile(filePath: FilePath, sourceFilePath: FilePath, password: String? = nil) throws {
         let fileDescriptor = try FileDescriptor.open(
             sourceFilePath,
             .readOnly
@@ -171,7 +130,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     ///   - filename: Filename of file
     ///   - contents: Contents of file
     ///   - password: Password to encrypt file with
-    public func writeFile(filename: String, contents: [UInt8], password: String? = nil) throws {
+    public mutating func writeFile(filename: String, contents: [UInt8], password: String? = nil) throws {
         try writeFile(filePath: .init(filename), contents: contents, password: password)
     }
 
@@ -183,7 +142,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
     ///   - filePath: File path of file
     ///   - contents: Contents of file
     ///   - password: Password to encrypt file with
-    public func writeFile(filePath: FilePath, contents: [UInt8], password: String? = nil) throws {
+    public mutating func writeFile(filePath: FilePath, contents: [UInt8], password: String? = nil) throws {
         let existingFileHeader =
             self.directory.first(where: { $0.filename == filePath })
             ?? self.newDirectoryEntries.first(where: { $0.filename == filePath })
@@ -245,7 +204,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         self.newDirectoryEntries.append(fileHeader)
     }
 
-    func addFolder(_ filePath: FilePath) throws {
+    mutating func addFolder(_ filePath: FilePath) throws {
         guard !filePath.isEmpty else { return }
         let existingFileHeader =
             self.directory.first(where: { $0.filename == filePath })
@@ -285,11 +244,11 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
 
     }
 
-    func writeDirectory() throws {
+    mutating func writeDirectory() throws {
         let centralDirectoryOffset = try storage.currentPosition()
 
         // write original directory
-        if let directoryBuffer {
+        if directoryBuffer.count > 0 {
             try storage.write(bytes: directoryBuffer)
         }
         // write new files to directory
@@ -306,7 +265,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         try writeEndOfCentralDirectory(endOfCentralDirectoryRecord)
     }
 
-    func writeFileHeader(_ fileHeader: Zip.FileHeader) throws {
+    mutating func writeFileHeader(_ fileHeader: Zip.FileHeader) throws {
         var fileHeader = fileHeader
         let extraFieldsBuffer = getExtraFieldBuffer(&fileHeader, localFileHeader: false)
         let (fileModificationTime, fileModificationDate) = fileHeader.fileModification.msdosDate()
@@ -336,7 +295,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         try self.storage.writeString(fileHeader.comment)
     }
 
-    func writeLocalFileHeader(_ fileHeader: Zip.FileHeader) throws {
+    mutating func writeLocalFileHeader(_ fileHeader: Zip.FileHeader) throws {
         var fileHeader = fileHeader
         let extraFields = getExtraFieldBuffer(&fileHeader, localFileHeader: true)
         let filename = fileHeader.isDirectory ? "\(fileHeader.filename)/" : fileHeader.filename.string
@@ -415,7 +374,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         return memoryBuffer.buffer
     }
 
-    func writeZip64EndOfCentralDirectory(_ zip64EndOfCentralDirectory: Zip.Zip64EndOfCentralDirectory) throws {
+    mutating func writeZip64EndOfCentralDirectory(_ zip64EndOfCentralDirectory: Zip.Zip64EndOfCentralDirectory) throws {
         try self.storage.writeIntegers(
             Zip.zip64EndOfCentralDirectorySignature,
             Zip.versionMadeBy.rawValue,
@@ -429,7 +388,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         )
     }
 
-    func writeZip64EndOfCentralLocator(_ zip64EndOfCentralLocator: Zip.Zip64EndOfCentralLocator) throws {
+    mutating func writeZip64EndOfCentralLocator(_ zip64EndOfCentralLocator: Zip.Zip64EndOfCentralLocator) throws {
         try self.storage.writeIntegers(
             Zip.zip64EndOfCentralLocatorSignature,
             zip64EndOfCentralLocator.diskNumberCentralDirectoryStarts,
@@ -438,7 +397,7 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
         )
     }
 
-    func writeEndOfCentralDirectory(_ endOfCentralDirectory: Zip.EndOfCentralDirectory) throws {
+    mutating func writeEndOfCentralDirectory(_ endOfCentralDirectory: Zip.EndOfCentralDirectory) throws {
         /// Check the size of values to see whether we need a zip64 block
         let diskNumber16: UInt16 = endOfCentralDirectory.diskNumber > 0xffff ? 0xffff : numericCast(endOfCentralDirectory.diskNumber)
         let diskNumberCentralDirectoryStarts16: UInt16 =
@@ -489,18 +448,54 @@ public final class ZipArchiveWriter<Storage: ZipWriteableStorage> {
 }
 
 extension ZipArchiveWriter {
-    /// Options when writing zip archive to file
-    public struct FileOptions: OptionSet {
-        public let rawValue: Int
-
-        public init(rawValue: Int) {
-            self.rawValue = rawValue
-        }
-
-        /// Create new zip archive
-        public static var create: Self { .init(rawValue: (1 << 0)) }
+    /// Initialize ZipArchiveWriter
+    /// - Parameter configuration: ZipArchiveWriter configuration
+    public init(configuration: ZipArchiveWriterConfiguration = .init()) where Storage == ZipMemoryStorage<[UInt8]> {
+        self.configuration = configuration
+        self.newDirectoryEntries = []
+        self.storage = .init()
+        self.endOfCentralDirectoryRecord = .init(
+            diskNumber: 0,
+            diskNumberCentralDirectoryStarts: 0,
+            diskEntries: 0,
+            totalEntries: 0,
+            centralDirectorySize: 0,
+            offsetOfCentralDirectory: 0,
+            comment: ""
+        )
+        self.directory = []
+        self.directoryBuffer = []
     }
 
+    ///  Initialize archive writer with zip archive
+    ///
+    /// - Parameters:
+    ///   - buffer: Buffer containing zip archive
+    ///   - configuration: ZipArchiveWriter configuration
+    public init(
+        buffer: [UInt8],
+        configuration: ZipArchiveWriterConfiguration = .init()
+    ) throws where Storage == ZipMemoryStorage<[UInt8]> {
+        try self.init(.init(buffer), appending: true, configuration: configuration)
+    }
+
+    ///  Initialize archive writer with zip archive
+    ///
+    /// - Parameters:
+    ///   - buffer: Buffer containing zip archive
+    ///   - configuration: ZipArchiveWriter configuration
+    public init(
+        bytes: ArraySlice<UInt8>,
+        configuration: ZipArchiveWriterConfiguration = .init()
+    ) throws where Storage == ZipMemoryStorage<ArraySlice<UInt8>> {
+        try self.init(.init(bytes), appending: true, configuration: configuration)
+    }
+}
+
+extension ZipArchiveWriter: Escapable where Storage: Escapable & ~Copyable {}
+extension ZipArchiveWriter: Copyable where Storage: Copyable & ~Escapable {}
+
+extension ZipArchiveWriter where Storage: ~Copyable & ~Escapable {
     /// Use ZipArchiveWriter to write to a file
     ///
     /// Opens or creates new file depending on `.create` option. If opening file then read
@@ -514,10 +509,10 @@ extension ZipArchiveWriter {
     ///   - process: Function to call with opened zip archive
     public static func withFile(
         _ filename: String,
-        options: FileOptions = [],
+        options: ZipFileOptions = [],
         configuration: ZipArchiveWriterConfiguration = .init(),
         process: (
-            ZipArchiveWriter
+            inout ZipArchiveWriter<ZipFileStorage>
         ) throws -> Void
     ) throws where Storage == ZipFileStorage {
         let fileDescriptor = try FileDescriptor.open(
@@ -527,15 +522,27 @@ extension ZipArchiveWriter {
             permissions: options.contains(.create) ? [.ownerReadWrite, .groupRead, .otherRead] : nil
         )
         return try fileDescriptor.closeAfter {
-            let writer = try ZipArchiveWriter<ZipFileStorage>(
+            var writer = try ZipArchiveWriter<ZipFileStorage>(
                 ZipFileStorage(fileDescriptor),
                 appending: !options.contains(.create),
                 configuration: configuration
             )
-            try process(writer)
+            try process(&writer)
             try writer.writeDirectory()
         }
     }
+}
+
+/// Options when writing zip archive to file
+public struct ZipFileOptions: OptionSet {
+    public let rawValue: Int
+
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+
+    /// Create new zip archive
+    public static var create: Self { .init(rawValue: (1 << 0)) }
 }
 
 /// Errors thrown when writing zip archives

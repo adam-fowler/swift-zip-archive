@@ -14,7 +14,7 @@ extension ZipArchiveReader {
     ///   - rootFolder: Root folder to extract into
     ///   - password: Password to use when decrypting files
     /// - Throws:
-    public func extract(to rootFolder: FilePath, password: String? = nil) throws {
+    public mutating func extract(to rootFolder: FilePath, password: String? = nil) throws {
         let directory = try self.readDirectory()
         for entry in directory {
             // don't resolve files outside of the root folder

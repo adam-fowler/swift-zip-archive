@@ -34,7 +34,11 @@ extension ZipArchiveWriter {
     ///         folder of the root file path.
     ///     - includeHiddenFiles: should we include hidden files
     ///   - filter: Closure that returns whether file should be included. Closure is called with FilePath and isDirectory boolean.
-    public func writeFolderContents(_ folder: FilePath, options: WriteFolderOptions, filter: (FilePath, Bool) -> Bool = { _, _ in true }) throws {
+    public mutating func writeFolderContents(
+        _ folder: FilePath,
+        options: WriteFolderOptions,
+        filter: (FilePath, Bool) -> Bool = { _, _ in true }
+    ) throws {
         var rootFolder = folder
         if options.contains(.includeContainingFolder) {
             rootFolder.removeLastComponent()

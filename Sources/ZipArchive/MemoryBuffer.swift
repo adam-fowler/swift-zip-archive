@@ -73,7 +73,7 @@ struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index
     var length: Int { self.buffer.count }
 
     @inlinable
-    public mutating func readInteger<T: FixedWidthInteger>(
+    public mutating func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
         as: T.Type = T.self
     ) throws(MemoryBufferError) -> T {
         let buffer = try read(MemoryLayout<T>.size)
@@ -85,7 +85,9 @@ struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index
     }
 
     @inlinable
-    public mutating func readIntegers<each T: FixedWidthInteger>(_ type: repeat (each T).Type) throws(MemoryBufferError) -> (repeat each T) {
+    public mutating func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(
+        _ type: repeat (each T).Type
+    ) throws(MemoryBufferError) -> (repeat each T) {
         (repeat try self.readInteger(as: (each T).self))
     }
 }

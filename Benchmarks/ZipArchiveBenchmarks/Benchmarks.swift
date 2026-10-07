@@ -26,16 +26,6 @@ let benchmarks: @Sendable () -> Void = {
         warmupIterations: 10
     )
 
-    Benchmark("crc32", configuration: .init(scalingFactor: .kilo)) { benchmark in
-        let buffer = (0..<1024).map { _ in UInt8.random(in: 0...255) }
-        benchmark.startMeasurement()
-        for _ in benchmark.scaledIterations {
-            buffer.withUnsafeBufferPointer { buffer in
-                blackHole(crc32(0, bytes: buffer))
-            }
-        }
-    }
-
     Benchmark("ZipArchiveReader.init") { benchmark in
         let file = try buildZipFile(numFile: 2, fileSizeRange: 100..<1000)
 
@@ -48,7 +38,7 @@ let benchmarks: @Sendable () -> Void = {
 
     Benchmark("ZipArchiveReader.readDirectory") { benchmark in
         let file = try buildZipFile(numFile: 32, fileSizeRange: 100..<4000)
-        let reader = try ZipArchiveReader(buffer: file)
+        var reader = try ZipArchiveReader(buffer: file)
         benchmark.startMeasurement()
         for _ in benchmark.scaledIterations {
             try blackHole(reader.readDirectory())
@@ -58,7 +48,7 @@ let benchmarks: @Sendable () -> Void = {
 
     Benchmark("ZipArchiveReader.readFile") { benchmark in
         let file = try buildZipFile(numFile: 1, fileSizeRange: 100..<101)
-        let reader = try ZipArchiveReader(buffer: file)
+        var reader = try ZipArchiveReader(buffer: file)
         let directory = try reader.readDirectory()
         benchmark.startMeasurement()
         for _ in benchmark.scaledIterations {
@@ -69,7 +59,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     func buildZipFile(numFile: Int, fileSizeRange: Range<Int>) throws -> ArraySlice<UInt8> {
-        let writer = ZipArchiveWriter()
+        var writer = ZipArchiveWriter()
         let step = Double(fileSizeRange.upperBound - fileSizeRange.lowerBound) / Double(numFile)
         var size = Double(fileSizeRange.lowerBound)
         for index in 0..<numFile {

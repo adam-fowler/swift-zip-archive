@@ -6,15 +6,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#if canImport(FoundationEssentials)
-public import FoundationEssentials
-#else
-public import Foundation
-#endif
-
 /// Storage in a memory buffer
-public struct ZipMemoryStorage<Bytes: ContiguousBytes & Collection>: ZipReadableStorage
-where Bytes.Element == UInt8, Bytes.Index == Int, Bytes.SubSequence: ContiguousBytes, Bytes.SubSequence.SubSequence: ContiguousBytes {
+public struct ZipMemoryStorage<Bytes: Collection>: ZipReadableStorage
+where Bytes.Element == UInt8, Bytes.Index == Int {
     @usableFromInline
     var buffer: MemoryBuffer<Bytes>
 

@@ -9,9 +9,9 @@
 public import SystemPackage
 
 #if canImport(FoundationEssentials)
-public import FoundationEssentials
+import FoundationEssentials
 #else
-public import Foundation
+import Foundation
 #endif
 
 /// Zip Archive writer configuration

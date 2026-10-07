@@ -26,16 +26,6 @@ let benchmarks: @Sendable () -> Void = {
         warmupIterations: 10
     )
 
-    Benchmark("crc32", configuration: .init(scalingFactor: .kilo)) { benchmark in
-        let buffer = (0..<1024).map { _ in UInt8.random(in: 0...255) }
-        benchmark.startMeasurement()
-        for _ in benchmark.scaledIterations {
-            buffer.withUnsafeBufferPointer { buffer in
-                blackHole(crc32(0, bytes: buffer))
-            }
-        }
-    }
-
     Benchmark("ZipArchiveReader.init") { benchmark in
         let file = try buildZipFile(numFile: 2, fileSizeRange: 100..<1000)
 

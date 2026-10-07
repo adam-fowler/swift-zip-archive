@@ -8,6 +8,12 @@
 
 public import SystemPackage
 
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
+#else
+public import Foundation
+#endif
+
 /// Zip storage on disk
 public struct ZipFileStorage: ZipReadableStorage, ZipWriteableStorage, ~Escapable {
     @usableFromInline

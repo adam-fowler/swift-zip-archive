@@ -9,9 +9,9 @@
 import SystemPackage
 
 #if canImport(FoundationEssentials)
-public import FoundationEssentials
+import FoundationEssentials
 #else
-public import Foundation
+import Foundation
 #endif
 
 /// ZipArchiveReader configuration
@@ -49,14 +49,6 @@ public struct ZipArchiveReader<Storage: ZipReadableStorage & ~Copyable & ~Escapa
 
     /// Read directory from zip archive into an array
     public mutating func readDirectory() throws -> [Zip.FileHeader] {
-        try self.storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
-        let bytes = try storage.read(numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
-        var memoryStorage = ZipMemoryStorage(bytes)
-        return try memoryStorage.readDirectory(numEntries: self.endOfCentralDirectoryRecord.diskEntries)
-    }
-
-    /// Read directory from zip archive into an array
-    public mutating func readDirectory() throws -> [Zip.FileHeader] where Storage.OutputBuffer: ContiguousBytes {
         try self.storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
         let bytes = try storage.read(numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
         return try bytes.withBytes { bytes in

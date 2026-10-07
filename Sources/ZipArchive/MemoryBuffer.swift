@@ -6,8 +6,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
+#else
+public import Foundation
+#endif
+
 @usableFromInline
-struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index == Int {
+struct MemoryBuffer<Bytes: ContiguousBytes & Collection> where Bytes.Element == UInt8, Bytes.Index == Int {
     @usableFromInline
     var buffer: Bytes.SubSequence
     @usableFromInline

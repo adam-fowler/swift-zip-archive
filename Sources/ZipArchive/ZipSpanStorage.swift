@@ -6,6 +6,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
+#else
+public import Foundation
+#endif
+
 /// Protocol for storage that can be read from
 public struct ZipSpanStorage: ZipReadableStorage, ~Escapable {
     @usableFromInline
@@ -30,10 +36,14 @@ public struct ZipSpanStorage: ZipReadableStorage, ~Escapable {
 
     @inlinable
     public mutating func read(_ count: Int) throws(ZipStorageError) -> OutputBuffer {
-        defer { self.position += count }
+        let newPosition = self.position + count
+        defer { self.position = newPosition }
+        guard count >= 0, newPosition <= self.endIndex else {
+            throw .readingPastEndOfFile
+        }
         return [UInt8](capacity: count) { outputSpan in
             outputSpan.withUnsafeMutableBufferPointer { outputBytes, initializedCount in
-                _ = self.bytes.extracting(self.position..<self.position + count).withUnsafeBytes { bytes in
+                _ = self.bytes.extracting(self.position..<newPosition).withUnsafeBytes { bytes in
                     outputBytes.update(fromContentsOf: bytes)
                 }
                 initializedCount = count
@@ -43,25 +53,69 @@ public struct ZipSpanStorage: ZipReadableStorage, ~Escapable {
 
     @inlinable
     public mutating func seek(_ index: Int64) throws(ZipStorageError) -> Int64 {
-        self.position = self.startIndex + Int(index)
-        return Int64(self.position)
+        let newPosition = self.startIndex + Int(index)
+        defer { self.position = newPosition }
+
+        guard newPosition >= 0, newPosition <= self.endIndex else {
+            throw .readingPastEndOfFile
+        }
+        return index
     }
 
     @inlinable
     public mutating func seekOffset(_ offset: Int64) throws(ZipStorageError) -> Int64 {
-        self.position = self.position + Int(offset)
-        return Int64(self.position)
+        let newPosition = self.position + Int(offset)
+        defer { self.position = newPosition }
+
+        guard newPosition >= self.startIndex, newPosition <= self.endIndex else {
+            throw .readingPastEndOfFile
+        }
+        return Int64(newPosition - self.startIndex)
     }
 
     @inlinable
     public mutating func seekEnd(_ offset: Int64) throws(ZipStorageError) -> Int64 {
-        self.position = self.endIndex + Int(offset)
-        return Int64(self.position)
+        let newPosition = self.endIndex + Int(offset)
+        defer { self.position = newPosition }
+
+        guard newPosition >= self.startIndex, newPosition <= self.endIndex else {
+            throw .readingPastEndOfFile
+        }
+        return Int64(newPosition - self.startIndex)
     }
 
     @inlinable
     public func currentPosition() throws(ZipStorageError) -> Int64 {
         Int64(self.position - self.startIndex)
+    }
+
+    /// Read integer from buffer
+    /// - Parameter as: Integer type to read
+    /// - Returns: Value read from storage
+    /// - Throws: ``ZipStorageError``
+    @inlinable
+    public mutating func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
+        as: T.Type = T.self
+    ) throws(ZipStorageError) -> T {
+        let newPosition = self.endIndex + Int(MemoryLayout<T>.size)
+        defer { self.position = newPosition }
+        guard newPosition <= self.endIndex else {
+            throw .readingPastEndOfFile
+        }
+        return self.bytes.unsafeLoad(fromUncheckedByteOffset: self.position, as: T.self).littleEndian
+    }
+
+    /// Read string of length from buffer
+    /// - Parameter length: Length of string in bytes.
+    /// - Returns: String read from storage
+    /// - Throws: ``ZipStorageError``
+    @inlinable
+    public mutating func readString(length: Int) throws(ZipStorageError) -> String {
+        let newPosition = self.endIndex + length
+        defer { self.position = newPosition }
+        return self.bytes.extracting(self.position..<newPosition).withUnsafeBytes { bytes in
+            String(decoding: bytes, as: UTF8.self)
+        }
     }
 
     /// Read buffer and copy into array of `UInt8`
@@ -81,23 +135,6 @@ public struct ZipSpanStorage: ZipReadableStorage, ~Escapable {
     public mutating func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(
         _ type: repeat (each T).Type
     ) throws(ZipStorageError) -> (repeat each T) {
-        func memorySize<Value>(_ value: Value.Type) -> Int {
-            MemoryLayout<Value>.size
-        }
-        var size = 0
-        for t in repeat each type {
-            size += memorySize(t)
-        }
-        func readInteger<Value: FixedWidthInteger & BitwiseCopyable>(_ int: some FixedWidthInteger & BitwiseCopyable) throws -> Value {
-            self.bytes.unsafeLoadUnaligned(fromByteOffset: self.position, as: Value.self)
-        }
-        
-        let bytes = try read(size)
-        var buffer = MemoryBuffer(bytes)
-        do {
-            return try buffer.readIntegers(repeat (each type))
-        } catch {
-            throw .init(from: error)
-        }
+        (repeat try self.readInteger(as: (each T).self))
     }
 }

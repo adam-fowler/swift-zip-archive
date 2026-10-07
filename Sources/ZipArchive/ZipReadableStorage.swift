@@ -6,10 +6,16 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
+#else
+public import Foundation
+#endif
+
 /// Protocol for storage that can be read from
 public protocol ZipReadableStorage: ZipStorage, ~Copyable, ~Escapable {
     /// Buffer type returned by `read`
-    associatedtype OutputBuffer: Collection where OutputBuffer.Element == UInt8, OutputBuffer.Index == Int
+    associatedtype OutputBuffer: ContiguousBytes, Collection where OutputBuffer.Element == UInt8, OutputBuffer.Index == Int
     ///  Read so many bytes from storage
     /// - Parameters
     ///   - count: Number of bytes to read
@@ -46,7 +52,7 @@ extension ZipReadableStorage where Self: ~Copyable & ~Escapable {
     /// - Returns: Value read from storage
     /// - Throws: ``ZipStorageError``
     @inlinable
-    public mutating func readInteger<T: FixedWidthInteger>(
+    public mutating func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
         as: T.Type = T.self
     ) throws(ZipStorageError) -> T {
         let buffer = try read(MemoryLayout<T>.size)

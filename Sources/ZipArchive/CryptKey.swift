@@ -22,8 +22,8 @@ struct CryptKey {
 
     mutating func updateKey(_ value: UInt8) {
         key.0 = crc32(key.0, byte: value)
-        key.1 += (key.0 & 0xff)
-        key.1 = (key.1 &* 134_775_813) + 1
+        key.1 = key.1 &+ (key.0 & 0xff)
+        key.1 = (key.1 &* 134_775_813) &+ 1
         key.2 = crc32(key.2, byte: UInt8(key.1 >> 24))
     }
 

@@ -7,9 +7,9 @@
 //
 
 #if canImport(FoundationEssentials)
-public import FoundationEssentials
+import FoundationEssentials
 #else
-public import Foundation
+import Foundation
 #endif
 
 /// Protocol for storage that can be read from
@@ -49,6 +49,21 @@ public struct ZipSpanStorage: ZipReadableStorage, ~Escapable {
                 initializedCount = count
             }
         }
+    }
+
+    @inlinable
+    public mutating func withBytes<Value>(
+        count: Int,
+        operation: (consuming ZipSpanStorage) throws(ZipStorageError) -> Value
+    ) throws(ZipStorageError) -> Value {
+        let newPosition = self.position + count
+        guard count >= 0, newPosition <= self.endIndex else {
+            throw .readingPastEndOfFile
+        }
+        let bytes = self.bytes.extracting(self.position..<newPosition)
+        self.position = newPosition
+        let storage = ZipSpanStorage(bytes)
+        return try operation(storage)
     }
 
     @inlinable

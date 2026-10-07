@@ -10,12 +10,19 @@
 public protocol ZipReadableStorage: ZipStorage, ~Copyable, ~Escapable {
     /// Buffer type returned by `read`
     associatedtype OutputBuffer: Collection where OutputBuffer.Element == UInt8, OutputBuffer.Index == Int
+    associatedtype TempStorage: ZipReadableStorage, ~Copyable, ~Escapable
     ///  Read so many bytes from storage
     /// - Parameters
     ///   - count: Number of bytes to read
     /// - Returns: Bytes read from storage
     /// - Throws: ``ZipStorageError``
     mutating func read(_ count: Int) throws(ZipStorageError) -> OutputBuffer
+    ///  Read so many bytes from storage
+    /// - Parameters
+    ///   - count: Number of bytes to read
+    /// - Returns: Bytes read from storage
+    /// - Throws: ``ZipStorageError``
+    mutating func withBytes<Value>(count: Int, operation: (consuming TempStorage) throws(ZipStorageError) -> Value) throws(ZipStorageError) -> Value
     ///  Read so many bytes from storage and return as Array
     /// - Parameters
     ///   - count: Number of bytes to read

@@ -30,6 +30,14 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
         }
     }
 
+    public typealias TempStorage = ZipMemoryStorage<[UInt8]>
+    public mutating func withBytes<Value>(
+        count: Int,
+        operation: (ZipMemoryStorage<[UInt8]>) throws(ZipStorageError) -> Value
+    ) throws(ZipStorageError) -> Value {
+        try operation(ZipMemoryStorage<[UInt8]>())
+    }
+
     @inlinable
     @discardableResult
     public mutating func seek(_ baseOffset: Int64) throws(ZipStorageError) -> Int64 {

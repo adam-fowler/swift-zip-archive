@@ -51,10 +51,15 @@ public struct ZipArchiveReader<Storage: ZipReadableStorage & ~Copyable & ~Escapa
     public mutating func readDirectory() throws -> [Zip.FileHeader] {
         try self.storage.seek(numericCast(endOfCentralDirectoryRecord.offsetOfCentralDirectory))
         let bytes = try storage.read(numericCast(endOfCentralDirectoryRecord.centralDirectorySize))
+        #if compiler(>=6.4)
         return try bytes.withBytes { bytes in
             var spanStorage = ZipSpanStorage(bytes)
             return try spanStorage.readDirectory(numEntries: self.endOfCentralDirectoryRecord.diskEntries)
         }
+        #else
+        var memoryStorage = ZipMemoryStorage(bytes)
+        return try memoryStorage.readDirectory(numEntries: self.endOfCentralDirectoryRecord.diskEntries)
+        #endif
     }
 
     /// Parse directory from zip file and run process on each entry

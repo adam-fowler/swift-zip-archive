@@ -14,7 +14,7 @@ public import Foundation
 
 /// Storage in a memory buffer
 public struct ZipMemoryStorage<Bytes: ContiguousBytes & Collection>: ZipReadableStorage
-where Bytes.Element == UInt8, Bytes.Index == Int, Bytes.SubSequence: ContiguousBytes {
+where Bytes.Element == UInt8, Bytes.Index == Int, Bytes.SubSequence: ContiguousBytes, Bytes.SubSequence.SubSequence: ContiguousBytes {
     @usableFromInline
     var buffer: MemoryBuffer<Bytes>
 

@@ -6,9 +6,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
+#else
+public import Foundation
+#endif
+
 /// Storage in a memory buffer
 public struct ZipMemoryStorage<Bytes: Collection>: ZipReadableStorage
-where Bytes.Element == UInt8, Bytes.Index == Int {
+where Bytes.Element == UInt8, Bytes.Index == Int, Bytes.SubSequence: ContiguousBytes {
     @usableFromInline
     var buffer: MemoryBuffer<Bytes>
 
@@ -21,6 +27,10 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
         Int64(self.buffer.position)
     }
 
+    var finalizedBuffer: Bytes.SubSequence {
+        self.buffer.buffer
+    }
+
     @inlinable
     public mutating func read(_ count: Int) throws(ZipStorageError) -> Bytes.SubSequence {
         do {
@@ -30,13 +40,27 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
         }
     }
 
-    public typealias TempStorage = ZipMemoryStorage<[UInt8]>
+    #if compiler(>=6.4)
     public mutating func withBytes<Value>(
         count: Int,
-        operation: (ZipMemoryStorage<[UInt8]>) throws(ZipStorageError) -> Value
-    ) throws(ZipStorageError) -> Value {
-        try operation(ZipMemoryStorage<[UInt8]>())
+        operation: (inout ZipSpanStorage) throws -> Value
+    ) throws -> Value {
+        try self.buffer.withBytes(count: count) { bytes in
+            var storage = ZipSpanStorage(bytes)
+            return try operation(&storage)
+        }
     }
+    #else
+    public mutating func withBytes<Value>(
+        count: Int,
+        operation: (inout ZipMemoryStorage<Bytes.SubSequence>) throws -> Value
+    ) throws -> Value {
+        let bytes = try self.read(count)
+        var storage = ZipMemoryStorage<Bytes.SubSequence>(bytes)
+        return try operation(&storage)
+    }
+
+    #endif
 
     @inlinable
     @discardableResult

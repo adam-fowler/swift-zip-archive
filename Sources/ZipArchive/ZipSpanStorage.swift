@@ -54,16 +54,16 @@ public struct ZipSpanStorage: ZipReadableStorage, ~Escapable {
     @inlinable
     public mutating func withBytes<Value>(
         count: Int,
-        operation: (consuming ZipSpanStorage) throws(ZipStorageError) -> Value
-    ) throws(ZipStorageError) -> Value {
+        operation: (inout ZipSpanStorage) throws -> Value
+    ) throws -> Value {
         let newPosition = self.position + count
         guard count >= 0, newPosition <= self.endIndex else {
-            throw .readingPastEndOfFile
+            throw ZipStorageError.readingPastEndOfFile
         }
         let bytes = self.bytes.extracting(self.position..<newPosition)
         self.position = newPosition
-        let storage = ZipSpanStorage(bytes)
-        return try operation(storage)
+        var storage = ZipSpanStorage(bytes)
+        return try operation(&storage)
     }
 
     @inlinable

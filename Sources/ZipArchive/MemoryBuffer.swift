@@ -6,6 +6,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
+#else
+public import Foundation
+#endif
+
 @usableFromInline
 struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index == Int {
     @usableFromInline
@@ -29,7 +35,7 @@ struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index
 
     @usableFromInline
     mutating func read(_ count: Int) throws(MemoryBufferError) -> Bytes.SubSequence {
-        guard count >= 0, count <= buffer.distance(from: self.index, to: self.buffer.endIndex) else {
+        guard count >= 0, count <= self.buffer.endIndex - self.index else {
             throw .readingPastEndOfBuffer
         }
         let position = self.index
@@ -73,7 +79,7 @@ struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index
     var length: Int { self.buffer.count }
 
     @inlinable
-    public mutating func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
+    mutating func readInteger<T: FixedWidthInteger & BitwiseCopyable>(
         as: T.Type = T.self
     ) throws(MemoryBufferError) -> T {
         let buffer = try read(MemoryLayout<T>.size)
@@ -85,11 +91,31 @@ struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index
     }
 
     @inlinable
-    public mutating func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(
+    mutating func readIntegers<each T: FixedWidthInteger & BitwiseCopyable>(
         _ type: repeat (each T).Type
     ) throws(MemoryBufferError) -> (repeat each T) {
         (repeat try self.readInteger(as: (each T).self))
     }
+}
+
+extension MemoryBuffer where Bytes.SubSequence: ContiguousBytes {
+    #if compiler(>=6.4)
+    @inlinable
+    mutating func withBytes<Value>(count: Int, operation: (RawSpan) throws -> Value) throws -> Value {
+        let oldIndex = self.index
+        self.index += count
+        guard count >= 0, self.index <= self.buffer.endIndex else {
+            self.index = oldIndex
+            throw MemoryBufferError.readingPastEndOfBuffer
+        }
+        return try self.buffer.withBytes { bytes in
+            let offset = oldIndex - self.buffer.startIndex + bytes.byteOffsets.lowerBound
+            let span = bytes.extracting(offset..<(offset + count))
+            return try operation(span)
+        }
+    }
+    #endif
+
 }
 
 extension MemoryBuffer: CustomStringConvertible {

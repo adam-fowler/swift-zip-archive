@@ -10,12 +10,6 @@ public import SystemPackage
 
 /// Zip storage on disk
 public struct ZipFileStorage: ZipReadableStorage, ZipWriteableStorage, ~Escapable {
-    public typealias OutputBuffer = [UInt8]
-    public typealias TempStorage = ZipMemoryStorage<[UInt8]>
-    public mutating func withBytes<Value>(count: Int, operation: (TempStorage) throws(ZipStorageError) -> Value) throws(ZipStorageError) -> Value {
-        try operation(ZipMemoryStorage())
-    }
-
     @usableFromInline
     let fileDescriptor: FileDescriptor
     @usableFromInline
@@ -50,6 +44,19 @@ public struct ZipFileStorage: ZipReadableStorage, ZipWriteableStorage, ~Escapabl
         }
         guard buffer.count == count else { throw ZipStorageError.readingPastEndOfFile }
         return buffer
+    }
+
+    public mutating func withBytes<Value>(
+        count: Int,
+        operation: (inout ZipSpanStorage) throws -> Value
+    ) throws -> Value {
+        try withTemporaryAllocation(byteCount: count, alignment: 1) { bytes in
+            try? bytes.withUnsafeMutableBytes { bytes, initializedCount in
+                initializedCount = try self.fileDescriptor.read(into: bytes)
+            }
+            var span = ZipSpanStorage(bytes.bytes)
+            return try operation(&span)
+        }
     }
 
     @inlinable

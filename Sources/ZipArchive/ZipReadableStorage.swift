@@ -22,7 +22,7 @@ public protocol ZipReadableStorage: ZipStorage, ~Copyable, ~Escapable {
     ///   - count: Number of bytes to read
     /// - Returns: Bytes read from storage
     /// - Throws: ``ZipStorageError``
-    mutating func withBytes<Value>(count: Int, operation: (consuming TempStorage) throws(ZipStorageError) -> Value) throws(ZipStorageError) -> Value
+    mutating func withBytes<Value>(count: Int, operation: (inout TempStorage) throws -> Value) throws -> Value
     ///  Read so many bytes from storage and return as Array
     /// - Parameters
     ///   - count: Number of bytes to read

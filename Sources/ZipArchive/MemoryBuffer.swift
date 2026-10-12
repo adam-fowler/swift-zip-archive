@@ -28,9 +28,9 @@ struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index
     }
 
     @usableFromInline
-    mutating func read(_ count: Int) throws(MemoryBufferError) -> Bytes.SubSequence {
+    mutating func read(_ count: Int) throws(ZipStorageError) -> Bytes.SubSequence {
         guard count >= 0, count <= buffer.distance(from: self.index, to: self.buffer.endIndex) else {
-            throw .readingPastEndOfBuffer
+            throw .readingPastEndOfFile
         }
         let position = self.index
         self.index = buffer.index(self.index, offsetBy: count)
@@ -38,32 +38,32 @@ struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index
     }
 
     @usableFromInline
-    mutating func seek(_ baseOffset: Int) throws(MemoryBufferError) {
-        guard baseOffset <= self.buffer.count && baseOffset >= 0 else { throw .offsetOutOfRange }
+    mutating func seek(_ baseOffset: Int) throws(ZipStorageError) {
+        guard baseOffset <= self.buffer.count && baseOffset >= 0 else { throw .fileOffsetOutOfRange }
         self.index = buffer.index(self.buffer.startIndex, offsetBy: baseOffset)
     }
 
     @usableFromInline
     @discardableResult
-    mutating func seekOffset(_ offset: Int) throws(MemoryBufferError) -> Int {
+    mutating func seekOffset(_ offset: Int) throws(ZipStorageError) -> Int {
         let baseOffset = self.buffer.index(self.index, offsetBy: offset)
-        guard (self.buffer.startIndex...self.buffer.endIndex).contains(baseOffset) else { throw .offsetOutOfRange }
+        guard (self.buffer.startIndex...self.buffer.endIndex).contains(baseOffset) else { throw .fileOffsetOutOfRange }
         self.index = baseOffset
         return self.index - self.buffer.startIndex
     }
 
     @usableFromInline
     @discardableResult
-    mutating func seekEnd(_ offset: Int = 0) throws(MemoryBufferError) -> Int {
+    mutating func seekEnd(_ offset: Int = 0) throws(ZipStorageError) -> Int {
         let baseOffset = self.buffer.index(self.buffer.endIndex, offsetBy: offset)
-        guard (self.buffer.startIndex...self.buffer.endIndex).contains(baseOffset) else { throw .offsetOutOfRange }
+        guard (self.buffer.startIndex...self.buffer.endIndex).contains(baseOffset) else { throw .fileOffsetOutOfRange }
         self.index = baseOffset
         return self.index - self.buffer.startIndex
     }
 
     @usableFromInline
-    mutating func truncate(_ size: Int64) throws(MemoryBufferError) {
-        guard size <= self.buffer.count else { throw .offsetOutOfRange }
+    mutating func truncate(_ size: Int64) throws(ZipStorageError) {
+        guard size <= self.buffer.count else { throw .fileOffsetOutOfRange }
         let endIndex = self.buffer.index(self.buffer.startIndex, offsetBy: numericCast(size))
         self.buffer = self.buffer[..<endIndex]
         self.index = self.buffer.endIndex
@@ -75,7 +75,7 @@ struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index
     @inlinable
     public mutating func readInteger<T: FixedWidthInteger>(
         as: T.Type = T.self
-    ) throws(MemoryBufferError) -> T {
+    ) throws(ZipStorageError) -> T {
         let buffer = try read(MemoryLayout<T>.size)
         var value: T = 0
         withUnsafeMutableBytes(of: &value) { valuePtr in
@@ -85,7 +85,7 @@ struct MemoryBuffer<Bytes: Collection> where Bytes.Element == UInt8, Bytes.Index
     }
 
     @inlinable
-    public mutating func readIntegers<each T: FixedWidthInteger>(_ type: repeat (each T).Type) throws(MemoryBufferError) -> (repeat each T) {
+    public mutating func readIntegers<each T: FixedWidthInteger>(_ type: repeat (each T).Type) throws(ZipStorageError) -> (repeat each T) {
         (repeat try self.readInteger(as: (each T).self))
     }
 }
@@ -100,12 +100,6 @@ extension MemoryBuffer: CustomStringConvertible {
             return "[\(self.buffer.map{String($0)}.joined(separator: ", "))]"
         }
     }
-}
-
-@usableFromInline
-enum MemoryBufferError: Error {
-    case readingPastEndOfBuffer
-    case offsetOutOfRange
 }
 
 extension MemoryBuffer where Bytes: RangeReplaceableCollection {

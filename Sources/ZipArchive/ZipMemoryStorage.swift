@@ -19,42 +19,26 @@ where Bytes.Element == UInt8, Bytes.Index == Int {
 
     @inlinable
     public func read(_ count: Int) throws(ZipStorageError) -> Bytes.SubSequence {
-        do {
-            return try self.buffer.read(count)
-        } catch {
-            throw .init(from: error)
-        }
+        try self.buffer.read(count)
     }
 
     @inlinable
     @discardableResult
     public func seek(_ baseOffset: Int64) throws(ZipStorageError) -> Int64 {
-        do {
-            try self.buffer.seek(numericCast(baseOffset))
-            return numericCast(self.buffer.index)
-        } catch {
-            throw .init(from: error)
-        }
+        try self.buffer.seek(numericCast(baseOffset))
+        return numericCast(self.buffer.index)
     }
 
     @inlinable
     @discardableResult
     public func seekOffset(_ offset: Int64) throws(ZipStorageError) -> Int64 {
-        do {
-            return try numericCast(self.buffer.seekOffset(numericCast(offset)))
-        } catch {
-            throw .init(from: error)
-        }
+        try numericCast(self.buffer.seekOffset(numericCast(offset)))
     }
 
     @inlinable
     @discardableResult
     public func seekEnd(_ offset: Int64 = 0) throws(ZipStorageError) -> Int64 {
-        do {
-            return try numericCast(self.buffer.seekEnd(numericCast(offset)))
-        } catch {
-            throw .init(from: error)
-        }
+        try numericCast(self.buffer.seekEnd(numericCast(offset)))
     }
 
     @inlinable
@@ -74,22 +58,6 @@ extension ZipMemoryStorage: ZipWriteableStorage where Bytes: RangeReplaceableCol
 
     @inlinable
     public func truncate(_ size: Int64) throws(ZipStorageError) {
-        do {
-            try self.buffer.truncate(size)
-        } catch {
-            throw .init(from: error)
-        }
-    }
-}
-
-extension ZipStorageError {
-    @usableFromInline
-    init(from memoryBufferError: MemoryBufferError) {
-        switch memoryBufferError {
-        case MemoryBufferError.readingPastEndOfBuffer:
-            self = .readingPastEndOfFile
-        case MemoryBufferError.offsetOutOfRange:
-            self = .fileOffsetOutOfRange
-        }
+        try self.buffer.truncate(size)
     }
 }

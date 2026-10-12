@@ -92,10 +92,6 @@ extension ZipReadableStorage {
         }
         let bytes = try read(size)
         var buffer = MemoryBuffer(bytes)
-        do {
-            return try buffer.readIntegers(repeat (each type))
-        } catch {
-            throw .init(from: error)
-        }
+        return try buffer.readIntegers(repeat (each type))
     }
 }
